@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GBEngine Documentation</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  {{SIDEBAR}}
+
+  <div id="content" class="content">
+    <div class="welcome">
+      <h1>GBEngine Documentation</h1>
+      <p>Select a module from the left to view its documentation.</p>
+      <section style="margin-top:2rem">
+        <h2 style="font-size:1.1rem;color:var(--text-muted)">Categories</h2>
+        <table style="max-width:600px">
+          <thead><tr><th>Category</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>engine</code></td><td>Debug system — core, inspector, overlay, perf facade</td></tr>
+            <tr><td><code>scenes</code></td><td>Base scene classes for all game screens</td></tr>
+            <tr><td><code>systems</code></td><td>Global services — Firebase, IAP, ads, audio, input, score, pathfinding…</td></tr>
+            <tr><td><code>systems/scene</code></td><td>Scene-scoped managers — flow, modals, transitions, state</td></tr>
+            <tr><td><code>ui</code></td><td>Top-level UI helpers and gamepad panel</td></tr>
+            <tr><td><code>ui/components</code></td><td>Reusable UI widgets — buttons, sliders, tabs, panels…</td></tr>
+            <tr><td><code>ui/styles</code></td><td>Pre-built theme objects for buttons and titles</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+
+  <div id="toc"></div>
+
+  <script>
+    const DOCLETS = {{DOCLETS_JSON}};
+    const SEARCH_INDEX = {{SEARCH_INDEX}};
+
+    // ----------------------------------------------------------------
+    // THEME
+    // ----------------------------------------------------------------
+    (function initTheme() {
+      const saved = localStorage.getItem("docTheme");
+      document.documentElement.setAttribute("data-theme", saved || "dark");
+    })();
+
+    function toggleTheme() {
+      const cur = document.documentElement.getAttribute("data-theme");
+      const next = cur === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("docTheme", next);
+    }
+
+    (function addThemeToggle() {
+      const sidebar = document.querySelector(".sidebar");
+      if (!sidebar) return;
+      const div = document.createElement("div");
+      div.className = "theme-toggle";
+      div.innerHTML = `<span>Theme</span><button id="themeToggleBtn">Toggle</button>`;
+      sidebar.appendChild(div);
+      div.querySelector("#themeToggleBtn").addEventListener("click", toggleTheme);
+    })();
+
+    (function addHomeButton() {
+      const sidebar = document.querySelector(".sidebar");
+      if (!sidebar) return;
+      const home = document.createElement("div");
+      home.className = "nav-home";
+      home.innerHTML = `<a href="#">⌂ GBEngine</a>`;
+      sidebar.insertBefore(home, sidebar.firstChild);
+    })();
+
+    // ----------------------------------------------------------------
+    // INDEX DOCLETS
+    // ----------------------------------------------------------------
+    const byLongname = new Map();
+    for (const d of DOCLETS) {
+      if (!d.longname) continue;
+      const existing = byLongname.get(d.longname);
+      // For `export default class`, the class and module share a longname — always prefer module
+      if (!existing || d.kind === "module") byLongname.set(d.longname, d);
+    }
+
+    // ----------------------------------------------------------------
+    // HELPERS
+    // ----------------------------------------------------------------
+    function getClassesForModule(mod) {
+      const named = DOCLETS.filter(d => d.kind === "class" && d.memberof === mod.longname);
+      if (named.length) return named;
+      // For `export default class` the class shares the module longname with no memberof
+      return DOCLETS.filter(d => d.kind === "class" && d.longname === mod.longname && !d.memberof);
+    }
+
+    function getMethodsForClass(cls) {
+      return DOCLETS.filter(d => d.kind === "function" && d.memberof === cls.longname);
+    }
+
+    function getMembersForClass(cls) {
+      return DOCLETS.filter(d => d.kind === "member" && d.memberof === cls.longname);
+    }
+
+    function getModuleStandaloneFunctions(mod) {
+      return DOCLETS.filter(d => d.kind === "function" && d.memberof === mod.longname);
+    }
+
+    function formatType(typeObj) {
+      if (!typeObj || !typeObj.names) return "";
+      return typeObj.names.join(" | ");
+    }
+
+    function renderBreadcrumbs(doclet) {
+      const parts = (doclet.name || "").split("/");
+      const cat = parts.length > 1 ? parts.slice(0, -1).join("/") : parts[0];
+      const name = parts[parts.length - 1];
+      return `
+        <div class="breadcrumbs">
+          <span class="crumb">${cat}</span>
+          <span class="crumb-sep">›</span>
+          <span class="crumb crumb-type">module</span>
+          <span class="crumb-sep">›</span>
+          <span class="crumb crumb-name">${name}</span>
+        </div>
+      `;
+    }
+
+    function renderSignature(doclet) {
+      const params = (doclet.params || []).filter(p => !p.name.includes("."));
+      const returns = doclet.returns || [];
+      const paramSig = params.map(p => {
+        const type = p.type ? formatType(p.type) : "";
+        const opt = p.optional ? "?" : "";
+        return type ? `${p.name}${opt}: ${type}` : p.name;
+      }).join(", ");
+      const retType = returns[0]?.type ? formatType(returns[0].type) : "";
+      return `${doclet.name}(${paramSig})${retType && retType !== "void" ? ": " + retType : ""}`;
+    }
+
+    // ----------------------------------------------------------------
+    // RENDER METHOD
+    // ----------------------------------------------------------------
+    function renderMethod(m) {
+      const params = (m.params || []).filter(p => !p.name.includes("."));
+      const paramDetails = m.params || []; // include nested for table
+      const returns = m.returns || [];
+      const signature = renderSignature(m);
+      const access = m.access || "";
+
+      let html = `
+        <div class="method-block" id="${CSS.escape(m.longname)}">
+          <h3>
+            <span class="signature">${signature}</span>
+            ${access ? `<span class="method-access">${access}</span>` : ""}
+            <a class="anchor" href="#${encodeURIComponent(m.longname)}">#</a>
+          </h3>
+          ${m.description ? `<pre class="doc-description">${m.description}</pre>` : ""}
+      `;
+
+      if (paramDetails.length) {
+        html += `
+          <h4 style="margin:8px 0 4px;font-size:13px;color:var(--text-muted)">Parameters</h4>
+          <table>
+            <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+        `;
+        for (const p of paramDetails) {
+          html += `
+            <tr>
+              <td><code>${p.name || ""}</code></td>
+              <td>${p.type ? formatType(p.type) : ""}</td>
+              <td>${p.description || ""}</td>
+            </tr>
+          `;
+        }
+        html += `</tbody></table>`;
+      }
+
+      if (returns.length && !(returns[0]?.type?.names?.[0] === "void")) {
+        html += `<h4 style="margin:8px 0 4px;font-size:13px;color:var(--text-muted)">Returns</h4>
+          <ul class="returns-list">`;
+        for (const r of returns) {
+          html += `<li>
+            <span class="type">${r.type ? formatType(r.type) : ""}</span>
+            ${r.description ? `<span style="margin-left:8px;color:var(--text-muted)">${r.description}</span>` : ""}
+          </li>`;
+        }
+        html += `</ul>`;
+      }
+
+      if (m.examples && m.examples.length) {
+        html += `<h4 style="margin:8px 0 4px;font-size:13px;color:var(--text-muted)">Example</h4>`;
+        for (const ex of m.examples) {
+          html += `<pre class="doc-example"><code>${ex.replace(/</g, "&lt;")}</code></pre>`;
+        }
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    // ----------------------------------------------------------------
+    // RENDER CLASS SECTION
+    // ----------------------------------------------------------------
+    function renderClassSection(cls) {
+      const methods = getMethodsForClass(cls);
+      const members = getMembersForClass(cls);
+      const desc = cls.classdesc || cls.description || "";
+      // Strip any "module:path/" prefix so we display just the bare class name
+      const shortName = cls.name.split('/').pop().replace(/^module:/, '');
+
+      const examples = cls.examples || [];
+
+      let html = `<div class="class-section">
+        <h2 class="class-section-title">class ${shortName}</h2>
+        ${desc ? `<pre class="doc-description">${desc}</pre>` : ""}
+        ${examples.length ? `<h4 style="margin:8px 0 4px;font-size:13px;color:var(--text-muted)">Example</h4>${examples.map(ex => `<pre class="doc-example"><code>${ex.replace(/</g, "&lt;")}</code></pre>`).join("")}` : ""}
+      `;
+
+      // Constructor params
+      if (cls.params && cls.params.length) {
+        html += `
+          <details class="section-block">
+            <summary>Constructor</summary>
+            <div class="method-block">
+              <h3><span class="signature">${shortName}(${cls.params.map(p => p.name).join(", ")})</span></h3>
+              <table>
+                <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+                <tbody>
+        `;
+        for (const p of cls.params) {
+          html += `<tr>
+            <td><code>${p.name}</code></td>
+            <td>${p.type ? formatType(p.type) : ""}</td>
+            <td>${p.description || ""}</td>
+          </tr>`;
+        }
+        html += `</tbody></table></div></details>`;
+      }
+
+      if (members.length) {
+        html += `
+          <details class="section-block">
+            <summary>Properties</summary>
+            <table>
+              <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+              <tbody>
+        `;
+        for (const m of members) {
+          html += `<tr>
+            <td><code>${m.name}</code></td>
+            <td>${m.type ? formatType(m.type) : ""}</td>
+            <td>${m.description || ""}</td>
+          </tr>`;
+        }
+        html += `</tbody></table></details>`;
+      }
+
+      if (methods.length) {
+        html += `<details class="section-block" open><summary>Methods</summary>`;
+        for (const m of methods) html += renderMethod(m);
+        html += `</details>`;
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    // ----------------------------------------------------------------
+    // RENDER MODULE PAGE
+    // ----------------------------------------------------------------
+    function renderModule(mod) {
+      const classes = getClassesForModule(mod);
+      const standaloneFuncs = getModuleStandaloneFunctions(mod);
+      const modName = mod.name || "";
+      const displayName = modName.split("/").pop();
+      // For `export default class` pattern the description lives on the class doclet, not the module
+      const desc = mod.classdesc || mod.description || "";
+      // For `export default class` pattern the class shares the module longname with no memberof
+      const isSelfClass = classes.length > 0 && classes[0].longname === mod.longname && !classes[0].memberof;
+
+      let html = `
+        <div class="module-page">
+          ${renderBreadcrumbs(mod)}
+          <h1 class="module-title">${displayName}</h1>
+          ${desc ? `<pre class="doc-description">${desc}</pre>` : ""}
+      `;
+
+      for (const cls of classes) {
+        html += renderClassSection(cls);
+      }
+
+      if (!isSelfClass && standaloneFuncs.length) {
+        html += `<details class="section-block" open><summary>Functions</summary>`;
+        for (const f of standaloneFuncs) html += renderMethod(f);
+        html += `</details>`;
+      }
+
+      if (!classes.length && !standaloneFuncs.length) {
+        html += `<p style="color:var(--text-muted)">No documented members found for this module.</p>`;
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    // ----------------------------------------------------------------
+    // TOC
+    // ----------------------------------------------------------------
+    function buildTOC() {
+      const toc = document.getElementById("toc");
+      if (!toc) return;
+      const methods = document.querySelectorAll(".method-block h3 .signature");
+      if (!methods.length) { toc.innerHTML = ""; return; }
+      toc.innerHTML = `<h4>On this page</h4>` +
+        [...methods].map(el => {
+          const block = el.closest(".method-block");
+          const id = block ? block.id : "";
+          return `<a href="#${encodeURIComponent(id)}">${el.textContent}</a>`;
+        }).join("");
+    }
+
+    // ----------------------------------------------------------------
+    // ROUTER
+    // ----------------------------------------------------------------
+    function renderRoute() {
+      const hash = decodeURIComponent(window.location.hash.slice(1));
+      const content = document.getElementById("content");
+
+      if (!hash) {
+        content.innerHTML = document.querySelector(".welcome")
+          ? document.querySelector(".welcome").outerHTML
+          : `<div class="welcome"><h1>GBEngine Documentation</h1><p>Select a module from the left.</p></div>`;
+        setActiveNav(null);
+        document.getElementById("toc").innerHTML = "";
+        return;
+      }
+
+      const doclet = byLongname.get(hash);
+      if (!doclet) {
+        content.innerHTML = `<p style="color:var(--text-muted)">Not found: ${hash}</p>`;
+        setActiveNav(null);
+        return;
+      }
+
+      let html = "";
+      if (doclet.kind === "module") {
+        html = renderModule(doclet);
+      } else if (doclet.kind === "class") {
+        html = renderClassSection(doclet);
+      } else if (doclet.kind === "function") {
+        html = renderMethod(doclet);
+      } else {
+        html = `<p>Unsupported: ${doclet.kind}</p>`;
+      }
+
+      content.innerHTML = html;
+      setActiveNav(hash);
+      buildTOC();
+    }
+
+    function setActiveNav(longname) {
+      document.querySelectorAll(".nav-item").forEach(el => {
+        el.classList.toggle("active", el.getAttribute("data-longname") === longname);
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // COLLAPSIBLES
+    // ----------------------------------------------------------------
+    function setupCollapsibles() {
+      document.querySelectorAll(".collapsible .category-header").forEach(header => {
+        header.addEventListener("click", () => {
+          header.parentElement.classList.toggle("collapsed");
+        });
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // SEARCH
+    // ----------------------------------------------------------------
+    function fuzzyMatch(haystack, needle) {
+      haystack = haystack.toLowerCase();
+      needle = needle.toLowerCase();
+      let h = 0, n = 0;
+      while (h < haystack.length && n < needle.length) {
+        if (haystack[h] === needle[n]) n++;
+        h++;
+      }
+      return n === needle.length;
+    }
+
+    function setupSearch() {
+      const input = document.getElementById("searchInput");
+      const results = document.getElementById("searchResults");
+      if (!input || !results) return;
+
+      input.addEventListener("input", () => {
+        const q = input.value.trim().toLowerCase();
+        results.innerHTML = "";
+        if (!q) return;
+
+        const matches = SEARCH_INDEX.filter(item => fuzzyMatch(item.name, q)).slice(0, 40);
+        for (const m of matches) {
+          const div = document.createElement("div");
+          div.className = "search-result-item";
+          const a = document.createElement("a");
+          a.href = "#" + encodeURIComponent(m.longname);
+          a.textContent =
+            m.type === "module"   ? `[module] ${m.category}/${m.name}` :
+            m.type === "class"    ? `[class] ${m.name}` :
+            `[fn] ${m.name}()`;
+          div.appendChild(a);
+          results.appendChild(div);
+        }
+      });
+
+      document.addEventListener("click", e => {
+        if (!e.target.closest(".search-box")) results.innerHTML = "";
+      });
+    }
+
+    // ----------------------------------------------------------------
+    // INIT
+    // ----------------------------------------------------------------
+    // Cache welcome HTML before router replaces it
+    const welcomeEl = document.querySelector(".welcome");
+    const welcomeHTML = welcomeEl ? welcomeEl.outerHTML : "";
+
+    // Override renderRoute to restore welcome from cache
+    const _origRenderRoute = renderRoute;
+    function renderRouteFixed() {
+      const hash = decodeURIComponent(window.location.hash.slice(1));
+      if (!hash) {
+        document.getElementById("content").innerHTML = welcomeHTML;
+        setActiveNav(null);
+        document.getElementById("toc").innerHTML = "";
+        return;
+      }
+      _origRenderRoute();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      setupCollapsibles();
+      setupSearch();
+      renderRouteFixed();
+      window.addEventListener("hashchange", renderRouteFixed);
+    });
+  </script>
+</body>
+</html>

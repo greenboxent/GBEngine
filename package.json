@@ -1,0 +1,45 @@
+{
+    "name": "@gamebase/gbengine",
+    "version": "1.0.0",
+    "description": "Shared Phaser 4 game framework for Greenbox Entertainment games",
+    "type": "module",
+    "main": "src/index.js",
+    "exports": {
+        ".": "./src/index.js"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
+    },
+    "peerDependencies": {
+        "@capacitor-community/admob": "^8.0.0",
+        "@capacitor-firebase/authentication": "^8.0.0",
+        "@capacitor/app": "^8.0.0",
+        "@capacitor/core": "^8.0.0",
+        "@capgo/native-purchases": "^8.0.0",
+        "firebase": "^12.0.0",
+        "phaser": "^4.0.0"
+    },
+    "devDependencies": {
+        "@capacitor-community/admob": "^8.0.0",
+        "@capacitor-firebase/authentication": "^8.1.0",
+        "@capacitor/app": "^8.0.1",
+        "@capacitor/core": "^8.0.1",
+        "@capgo/native-purchases": "^8.3.0",
+        "docdash": "^2.0.2",
+        "firebase": "^12.8.0",
+        "jsdoc": "^4.0.5",
+        "phaser": "^4.0.0"
+    },
+    "scripts": {
+        "lint": "echo \"No linter configured yet\"",
+        "docs": "node scripts/generate-docs.js"
+    },
+    "keywords": [
+        "phaser",
+        "game",
+        "shared",
+        "greenbox"
+    ],
+    "license": "UNLICENSED",
+    "private": false
+}
