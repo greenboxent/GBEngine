@@ -135,6 +135,27 @@ export default class BaseSettingsScene extends Phaser.Scene {
 
         if (this.inputController) this.inputController.update();
 
+        // Update gamepad test panel — use raw browser API to bypass Phaser timestamp guard
+        if (this.activeTab === 'Gamepad' && this.gamepadPanel) {
+            const rawPads = navigator.getGamepads ? navigator.getGamepads() : [];
+            const rawPad  = Array.from(rawPads).find(p => p !== null) || null;
+            const padForPanel = rawPad ? {
+                axes:    Array.from(rawPad.axes).map(v => ({ getValue: () => v })),
+                buttons: rawPad.buttons,
+            } : null;
+            this.gamepadPanel.update(padForPanel);
+            // On Gamepad tab: eat all gamepad nav so buttons don't trigger UI actions
+            if (this.inputController) {
+                this.inputController.menuUp       = false;
+                this.inputController.menuDown     = false;
+                this.inputController.menuSelect   = false;
+                this.inputController.menuTabLeft  = false;
+                this.inputController.menuTabRight = false;
+                this.inputController.menuBack     = false;
+            }
+            return;
+        }
+
         const cursors  = this.input.keyboard.createCursorKeys();
         const enterKey = this.input.keyboard.addKey('ENTER');
 
@@ -161,12 +182,6 @@ export default class BaseSettingsScene extends Phaser.Scene {
         if (this.inputController?.menuBack) {
             const ctrl = this.scene.get(this._controllerKey);
             ctrl?.flow?.modal?.closeModal(this.sys.settings.key);
-        }
-
-        // Update gamepad test panel if active
-        const pad = this.input.gamepad.getPad(0);
-        if (this.activeTab === 'Gamepad' && this.gamepadPanel) {
-            this.gamepadPanel.update(pad);
         }
 
         // Reset per-frame menu actions

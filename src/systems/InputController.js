@@ -107,13 +107,56 @@ export class InputController {
         // Build keys from current bindings
         this._buildKeys();
 
-        // Gamepad connection
+        // Gamepad connection — listen at window level so it fires regardless of active scene
+        window.addEventListener('gamepadconnected', (e) => {
+            console.log('[InputController] gamepadconnected:', e.gamepad.id, 'index:', e.gamepad.index);
+            const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+            this._rawPad = Array.from(pads).find(p => p !== null) || null;
+        });
+        window.addEventListener('gamepaddisconnected', () => {
+            this._rawPad = null;
+        });
+
+        // Release cached pad when tab loses focus so other tabs can grab it cleanly.
+        // Re-seed when tab regains focus.
+        window.addEventListener('blur', () => {
+            this._rawPad = null;
+            this.moveX = 0; this.moveY = 0;
+            this.shoot = false; this.pause = false; this.settings = false;
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this._rawPad = null;
+                this.moveX = 0; this.moveY = 0;
+                this.shoot = false; this.pause = false; this.settings = false;
+            } else {
+                this._seedRawPad();
+            }
+        });
+
+        // Seed from any already-active pad
+        this._rawPad = null;
+        this._seedRawPad();
+
         scene.input.gamepad.once('connected', pad => {
             this.pad = pad;
         });
 
         if (scene.input.gamepad.total > 0) {
             this.pad = scene.input.gamepad.getPad(0);
+        }
+    }
+
+    /**
+     * Seeds _rawPad from navigator.getGamepads() — finds first non-null entry.
+     * @private
+     */
+    _seedRawPad() {
+        if (!navigator.getGamepads) return;
+        const pads = navigator.getGamepads();
+        this._rawPad = Array.from(pads).find(p => p !== null) || null;
+        if (this._rawPad) {
+            console.log('[InputController] Gamepad seeded:', this._rawPad.id);
         }
     }
 
@@ -228,99 +271,76 @@ export class InputController {
         this.weaponPrev = Phaser.Input.Keyboard.JustDown(k.weaponPrev);
         this.weaponNext = Phaser.Input.Keyboard.JustDown(k.weaponNext);
 
-        // Gamepad support
-        this.pad = this.scene.input.gamepad.getPad(0);
+        // Gamepad support — use window-level cached raw pad (_rawPad) which bypasses
+        // Phaser's per-scene timestamp guard and Chrome's index-0 assumption.
+        // _rawPad is kept fresh by window gamepadconnected/disconnected listeners.
+        this.pad = this.scene.input.gamepad.getPad(0); // keep Phaser ref for events
+        // Refresh from raw API every frame (handles reconnects and index changes)
+        const freshPads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const rawPad = Array.from(freshPads).find(p => p !== null) || this._rawPad || null;
+        if (rawPad) this._rawPad = rawPad;
 
-        if (this.pad) {
+        if (rawPad) {
             const xbox = Phaser.Input.Gamepad.Configs.XBOX_360;
 
-            const startPressed = this.pad.buttons[xbox.START]?.pressed;
-            const backPressed = this.pad.buttons[xbox.BACK]?.pressed;
+            const startPressed = rawPad.buttons[xbox.START]?.pressed || false;
+            const backPressed  = rawPad.buttons[xbox.BACK]?.pressed  || false;
 
-            if (backPressed && !this.prevBackPressed) this.pause = true;
+            if (backPressed  && !this.prevBackPressed)  this.pause    = true;
             if (startPressed && !this.prevStartPressed) this.settings = true;
 
             this.prevStartPressed = startPressed;
-            this.prevBackPressed = backPressed;
+            this.prevBackPressed  = backPressed;
 
-            // Gamepad movement (analog)
-            const ax = this.pad.axes[0]?.getValue() || 0;
-            const ay = this.pad.axes[1]?.getValue() || 0;
+            // Gamepad movement (left analog stick, raw axis values)
+            const ax = rawPad.axes[0] || 0;
+            const ay = rawPad.axes[1] || 0;
 
             if (Math.abs(ax) > 0.2) this.moveX = ax;
             if (Math.abs(ay) > 0.2) this.moveY = ay;
 
-            // Gamepad shoot (RT) - Edge-triggered
-            const rtValue = this.pad.buttons[7]?.value || 0;
+            // Gamepad shoot (RT) — edge-triggered
+            const rtValue   = rawPad.buttons[7]?.value || 0;
             const rtPressed = rtValue > 0.1;
             if (rtPressed && !this.prevRTPressed) {
                 this.shoot = true;
-                // Debug: track RT trigger detection
                 this.debugRTCount++;
-                // Debug: RT trigger press counted
             }
             this.prevRTPressed = rtPressed;
 
-            // Gamepad weapon switching and tab navigation (LB/RB)
-            const lbPressed = this.pad.buttons[4]?.pressed || false;
-            const rbPressed = this.pad.buttons[5]?.pressed || false;
+            // Weapon switching / tab navigation (LB/RB) — edge-triggered
+            const lbPressed = rawPad.buttons[4]?.pressed || false;
+            const rbPressed = rawPad.buttons[5]?.pressed || false;
 
-            if (lbPressed && !this.prevLB) {
-                this.weaponPrev = true;
-                this.menuTabLeft = true;
-            }
-            if (rbPressed && !this.prevRB) {
-                this.weaponNext = true;
-                this.menuTabRight = true;
-            }
+            if (lbPressed && !this.prevLB) { this.weaponPrev = true; this.menuTabLeft  = true; }
+            if (rbPressed && !this.prevRB) { this.weaponNext = true; this.menuTabRight = true; }
 
             this.prevLB = lbPressed;
             this.prevRB = rbPressed;
 
-            // Menu navigation (left stick Y, D-pad, A button, B button)
-            const leftY = this.pad.axes[1]?.getValue() || 0;
-            const dpadDown = this.pad.buttons[13]?.pressed || false;
-            const dpadUp = this.pad.buttons[12]?.pressed || false;
-            const aPressed = this.pad.buttons[0]?.pressed || false;
-            const bPressed = this.pad.buttons[1]?.pressed || false;
-            const dpadLeft = this.pad.buttons[14]?.pressed || false;
-            const dpadRight = this.pad.buttons[15]?.pressed || false;
+            // Menu navigation (left stick Y + D-pad + face buttons) — edge-triggered
+            const leftY     = rawPad.axes[1] || 0;
+            const dpadDown  = rawPad.buttons[13]?.pressed || false;
+            const dpadUp    = rawPad.buttons[12]?.pressed || false;
+            const aPressed  = rawPad.buttons[0]?.pressed  || false;
+            const bPressed  = rawPad.buttons[1]?.pressed  || false;
+            const dpadLeft  = rawPad.buttons[14]?.pressed || false;
+            const dpadRight = rawPad.buttons[15]?.pressed || false;
 
-            // Menu navigation (edge-triggered)
-            if ((this.prevLeftY <= 0.5 && leftY > 0.5) || (dpadDown && !this.prevDpadDown)) {
-                this.menuDown = true;
-            }
-            if ((this.prevLeftY >= -0.5 && leftY < -0.5) || (dpadUp && !this.prevDpadUp)) {
-                this.menuUp = true;
-            }
-            if (aPressed && !this.prevAPressed) {
-                this.menuSelect = true;
-            }
-            if (bPressed && !this.prevBPressed) {
-                this.menuBack = true;
-            }
+            if ((this.prevLeftY <= 0.5  && leftY > 0.5)  || (dpadDown  && !this.prevDpadDown))  this.menuDown   = true;
+            if ((this.prevLeftY >= -0.5 && leftY < -0.5) || (dpadUp    && !this.prevDpadUp))    this.menuUp     = true;
+            if (aPressed && !this.prevAPressed) this.menuSelect = true;
+            if (bPressed && !this.prevBPressed) this.menuBack   = true;
+            if (dpadLeft  && !this.prevDpadLeft)  this.menuTabLeft  = true;
+            if (dpadRight && !this.prevDpadRight) this.menuTabRight = true;
 
-            // Tab navigation with D-pad left/right (edge-triggered)
-            if (dpadLeft && !this.prevDpadLeft) {
-                this.menuTabLeft = true;
-            }
-            if (dpadRight && !this.prevDpadRight) {
-                this.menuTabRight = true;
-            }
-
-            this.prevBPressed = bPressed;
-            this.prevLeftY = leftY;
-            this.prevDpadDown = dpadDown;
-            this.prevDpadUp = dpadUp;
-            this.prevAPressed = aPressed;
-            this.prevDpadLeft = dpadLeft;
+            this.prevBPressed  = bPressed;
+            this.prevLeftY     = leftY;
+            this.prevDpadDown  = dpadDown;
+            this.prevDpadUp    = dpadUp;
+            this.prevAPressed  = aPressed;
+            this.prevDpadLeft  = dpadLeft;
             this.prevDpadRight = dpadRight;
-        }
-
-        // Reset menu actions at the end of frame
-        if (!this.pad || !this.pad.buttons[0]?.pressed) {
-            // Only reset if gamepad is available and checked
-            // This allows keyboard menu actions to be detected
         }
 
         if (Debug.isLevel3Active() && (this.moveX !== 0 || this.moveY !== 0)) {
@@ -339,16 +359,18 @@ export class InputController {
         this.menuTabLeft = false;
         this.menuTabRight = false;
 
-        // Sample current gamepad state to prevent false edge triggers
+        // Sample current raw gamepad state to prevent false edge triggers on wake
+        this._seedRawPad();
+        const rawPad  = this._rawPad;
         this.pad = this.scene.input.gamepad.getPad(0);
-        if (this.pad) {
-            this.prevLeftY = this.pad.axes[1]?.getValue() || 0;
-            this.prevDpadDown = this.pad.buttons[13]?.pressed || false;
-            this.prevDpadUp = this.pad.buttons[12]?.pressed || false;
-            this.prevBPressed = this.pad.buttons[1]?.pressed || false;
-            this.prevAPressed = this.pad.buttons[0]?.pressed || false;
-            this.prevDpadLeft = this.pad.buttons[14]?.pressed || false;
-            this.prevDpadRight = this.pad.buttons[15]?.pressed || false;
+        if (rawPad) {
+            this.prevLeftY     = rawPad.axes[1] || 0;
+            this.prevDpadDown  = rawPad.buttons[13]?.pressed || false;
+            this.prevDpadUp    = rawPad.buttons[12]?.pressed || false;
+            this.prevBPressed  = rawPad.buttons[1]?.pressed  || false;
+            this.prevAPressed  = rawPad.buttons[0]?.pressed  || false;
+            this.prevDpadLeft  = rawPad.buttons[14]?.pressed || false;
+            this.prevDpadRight = rawPad.buttons[15]?.pressed || false;
         }
     }
 }

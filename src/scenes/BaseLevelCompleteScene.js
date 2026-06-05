@@ -76,7 +76,15 @@ export default class BaseLevelCompleteScene extends Phaser.Scene {
     /** @override */
     update() {
         if (this.inputCooldown > 0) { this.inputCooldown--; return; }
-        this.inputController?.update();
+        if (!this.inputController) return;
+        this.inputController.update();
+        if (this.inputController.menuUp)     { this._navigate(-1); }
+        if (this.inputController.menuDown)   { this._navigate(1);  }
+        if (this.inputController.menuSelect) { this._selectCurrent(); }
+        this.inputController.menuUp     = false;
+        this.inputController.menuDown   = false;
+        this.inputController.menuSelect = false;
+        this.inputController.menuBack   = false;
     }
 
     // -------------------------------------------------------------------------
@@ -126,11 +134,9 @@ export default class BaseLevelCompleteScene extends Phaser.Scene {
      * @private
      */
     _setupInput() {
-        this.inputController = new InputController(this, {
-            onUp:     () => this._navigate(-1),
-            onDown:   () => this._navigate(1),
-            onSelect: () => this._selectCurrent(),
-        });
+        this.inputController = InputController.getInstance(this);
+        this.inputController.resetMenuState();
+        this.inputCooldown = 3;
     }
 
     /**

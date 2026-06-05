@@ -32,7 +32,7 @@ export default class BasePauseScene extends Phaser.Scene {
         const { width, height } = this.scale;
         this.modal = new ModalBase(this, {
             width:  Math.min(400, width  * 0.75),
-            height: Math.min(300, height * 0.50),
+            height: Math.min(400, height * 0.65),
             padding: 28,
         });
 
@@ -51,7 +51,16 @@ export default class BasePauseScene extends Phaser.Scene {
     /** @override */
     update() {
         if (this.inputCooldown > 0) { this.inputCooldown--; return; }
-        this.inputController?.update();
+        if (!this.inputController) return;
+        this.inputController.update();
+        if (this.inputController.menuUp)     { this._navigate(-1); }
+        if (this.inputController.menuDown)   { this._navigate(1);  }
+        if (this.inputController.menuSelect) { this._selectCurrent(); }
+        if (this.inputController.menuBack)   { this.scene.get('SceneController')?.flow?.resumeGame(); }
+        this.inputController.menuUp     = false;
+        this.inputController.menuDown   = false;
+        this.inputController.menuSelect = false;
+        this.inputController.menuBack   = false;
     }
 
     // -------------------------------------------------------------------------
@@ -82,12 +91,9 @@ export default class BasePauseScene extends Phaser.Scene {
      * @private
      */
     _setupInput() {
-        this.inputController = new InputController(this, {
-            onUp:     () => this._navigate(-1),
-            onDown:   () => this._navigate(1),
-            onSelect: () => this._selectCurrent(),
-            onBack:   () => this.scene.get('SceneController')?.resumeGame(),
-        });
+        this.inputController = InputController.getInstance(this);
+        this.inputController.resetMenuState();
+        this.inputCooldown = 3;
     }
 
     /**

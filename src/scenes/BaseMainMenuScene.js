@@ -176,6 +176,7 @@ export default class BaseMainMenuScene extends Phaser.Scene {
      * @private
      */
     _selectCurrent() {
+    }
 
     /**
      * Highlights the button at `idx` and dims all others.
@@ -183,6 +184,7 @@ export default class BaseMainMenuScene extends Phaser.Scene {
      * @param {number} idx  Zero-based index of the button to highlight.
      */
     _highlightButton(idx) {
+    }
 
     // -------------------------------------------------------------------------
     // Music

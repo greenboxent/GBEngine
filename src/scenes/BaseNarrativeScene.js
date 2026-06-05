@@ -128,6 +128,7 @@ export default class BaseNarrativeScene extends Phaser.Scene {
      * @private
      */
     _setupInput() {
+        this.inputController = new InputController(this, {
             onSelect: () => this._done(),
         });
     }
