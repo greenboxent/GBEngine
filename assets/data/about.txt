@@ -1,0 +1,14 @@
+Game Title
+
+Version 1.0.0
+
+A game built with GBEngine.
+
+Designed and created by Greg Turner.
+Code written by Greg Turner with use
+of Gemini, ChatGpt, and Claude Sonnet.
+
+Privacy Policy: https://www.greenboxgames.com/privacy-policy
+Terms & Conditions: https://www.greenboxgames.com/terms-and-conditions
+
+© 2026

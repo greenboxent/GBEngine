@@ -214,6 +214,8 @@ export default class BaseSettingsScene extends Phaser.Scene {
     _getHelpTextKey()  { return 'help-text'; }
 
     /** Return the app version string to stamp into the About tab. Override in subclasses.
+     *  By default returns '' — version is expected to already be in about.txt
+     *  (written by the bump-version.js build script).
      *  @returns {string}
      */
     _getAppVersion() { return ''; }

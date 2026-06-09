@@ -109,7 +109,6 @@ export class InputController {
 
         // Gamepad connection — listen at window level so it fires regardless of active scene
         window.addEventListener('gamepadconnected', (e) => {
-            console.log('[InputController] gamepadconnected:', e.gamepad.id, 'index:', e.gamepad.index);
             const pads = navigator.getGamepads ? navigator.getGamepads() : [];
             this._rawPad = Array.from(pads).find(p => p !== null) || null;
         });
@@ -155,9 +154,6 @@ export class InputController {
         if (!navigator.getGamepads) return;
         const pads = navigator.getGamepads();
         this._rawPad = Array.from(pads).find(p => p !== null) || null;
-        if (this._rawPad) {
-            console.log('[InputController] Gamepad seeded:', this._rawPad.id);
-        }
     }
 
     // -------------------------------------------------------------------------

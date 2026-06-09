@@ -246,6 +246,27 @@ export class PersonalScores {
     // LocalStorage helpers
     // -------------------------------------------------------------------------
 
+    /**
+     * Synchronously return the highest level number the player has completed
+     * (i.e. has a saved score for).  Reads only from localStorage so it is
+     * instant and usable before async init().
+     *
+     * @param {string} [gameKey]  Override the configured game key.
+     * @returns {number}  Highest completed level, or 1 if none recorded.
+     */
+    static getHighestUnlocked(gameKey = null) {
+        try {
+            const key = gameKey ? `${gameKey}_personalScores` : this._lsKey();
+            const raw = localStorage.getItem(key);
+            if (!raw) return 1;
+            const scores = JSON.parse(raw);
+            if (!Array.isArray(scores) || scores.length === 0) return 1;
+            return Math.max(...scores.map(s => s.level ?? 0), 1);
+        } catch {
+            return 1;
+        }
+    }
+
     /** @private */
     static _getFromLocalStorage() {
         try {
