@@ -338,10 +338,6 @@ export class InputController {
             this.prevDpadLeft  = dpadLeft;
             this.prevDpadRight = dpadRight;
         }
-
-        if (Debug.isLevel3Active() && (this.moveX !== 0 || this.moveY !== 0)) {
-            console.log('[InputController] state:', { moveX: this.moveX, moveY: this.moveY });
-        }
     }
 
     /**
