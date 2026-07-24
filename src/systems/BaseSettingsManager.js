@@ -122,7 +122,7 @@ export class BaseSettingsManager {
             Debug.warn('Settings', 'localStorage save failed:', err);
         }
 
-        if (this._fb?.isReady() && this._data.playerName) {
+        if (this._fb?.isReady()) {
             const uid = this._fb.getPlayerId();
             const { ref, set } = this._fb.getFunctions();
             (async () => {
@@ -214,6 +214,8 @@ export class BaseSettingsManager {
      * @private
      * @param {string} name  Raw player name to sanitise.
      * @returns {string}
+     */
+    _sanitizeNameKey(name) {
         return name.toLowerCase().replace(/\./g, '_dot_').replace(/[#$[\]/]/g, '_');
     }
 
