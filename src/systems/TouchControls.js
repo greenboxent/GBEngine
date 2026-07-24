@@ -19,8 +19,15 @@ import { Settings } from './SettingsManager.js';
  */
 export class TouchControls {
 
-    /** @param {Phaser.Scene} scene */
-    constructor(scene) {
+    /**
+     * @param {Phaser.Scene} scene
+     * @param {object} [config]
+     * @param {boolean} [config.showWeaponButtons=true]  Show the weapon prev/next
+     *   buttons. Set false for games with a single weapon (no switching).
+     * @param {boolean} [config.showZoomButton=true]  Show the zoom toggle button.
+     *   Set false for games that don't implement scene._toggleZoom.
+     */
+    constructor(scene, config = {}) {
         this.scene  = scene;
         this.active = false;
 
@@ -29,6 +36,9 @@ export class TouchControls {
 
         this.active   = true;
         this._visible = true;
+
+        this._showWeaponButtons = config.showWeaponButtons ?? true;
+        this._showZoomButton    = config.showZoomButton    ?? true;
 
         /** Button hit-test definitions { x, y, r } — set by _layout */
         this._BTN = {};
@@ -147,11 +157,15 @@ export class TouchControls {
 
         const zoomY_s = Math.min(H - actnR - 4, pauseY_s + 2 * actnR + 6);
         this._BTN = {
-            weaponPrev: { x: joyX_s,   y: wPrevY_s, r: weaponR },
-            weaponNext: { x: fireCX_s, y: wNextY_s, r: weaponR },
-            pause:      { x: pauseX_s, y: pauseY_s, r: actnR },
-            zoom:       { x: pauseX_s, y: zoomY_s,  r: actnR },
+            pause: { x: pauseX_s, y: pauseY_s, r: actnR },
         };
+        if (this._showWeaponButtons) {
+            this._BTN.weaponPrev = { x: joyX_s,   y: wPrevY_s, r: weaponR };
+            this._BTN.weaponNext = { x: fireCX_s, y: wNextY_s, r: weaponR };
+        }
+        if (this._showZoomButton) {
+            this._BTN.zoom = { x: pauseX_s, y: zoomY_s, r: actnR };
+        }
 
         this._drawStaticButtons();
         this._rebuildLabels(s);
@@ -184,10 +198,10 @@ export class TouchControls {
             { x: this._fireCX, y: this._fireCY },
             'FIRE', 18,
         );
-        this._labels.weaponPrev = mkLabel(BTN.weaponPrev, '◀ WPN', 14);
-        this._labels.weaponNext = mkLabel(BTN.weaponNext, 'WPN ▶', 14);
-        this._labels.pause      = mkLabel(BTN.pause,      '❚❚', 16);
-        this._labels.zoom       = mkLabel(BTN.zoom,       '🔍', 14);
+        if (BTN.weaponPrev) this._labels.weaponPrev = mkLabel(BTN.weaponPrev, '◀ WPN', 14);
+        if (BTN.weaponNext) this._labels.weaponNext = mkLabel(BTN.weaponNext, 'WPN ▶', 14);
+        this._labels.pause = mkLabel(BTN.pause, '❚❚', 16);
+        if (BTN.zoom) this._labels.zoom = mkLabel(BTN.zoom, '🔍', 14);
 
         // Add labels to uiLayer so the UI camera renders them at zoom=1.
         this.scene.uiLayer?.add(Object.values(this._labels));
@@ -264,12 +278,14 @@ export class TouchControls {
         g.fillCircle(fx, fy, this._knobR);
 
         // ── Right-side buttons ─────────────────────────────────────────────
-        circle(BTN.weaponPrev, 0x334433, 0x88cc88);
-        circle(BTN.weaponNext, 0x334433, 0x88cc88);
-        circle(BTN.pause,      0x222222, 0x888888, 0.60);
-        circle(BTN.zoom,
-            this._zoomActive ? 0x112233 : 0x222222,
-            this._zoomActive ? 0x44aaff : 0x666688, 0.60);
+        if (BTN.weaponPrev) circle(BTN.weaponPrev, 0x334433, 0x88cc88);
+        if (BTN.weaponNext) circle(BTN.weaponNext, 0x334433, 0x88cc88);
+        circle(BTN.pause, 0x222222, 0x888888, 0.60);
+        if (BTN.zoom) {
+            circle(BTN.zoom,
+                this._zoomActive ? 0x112233 : 0x222222,
+                this._zoomActive ? 0x44aaff : 0x666688, 0.60);
+        }
     }
 
     /** Redraw the knob each frame over the fixed base ring. */
