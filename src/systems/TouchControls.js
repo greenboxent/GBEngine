@@ -500,8 +500,15 @@ export class TouchControls {
         if (!this.active) return;
 
         // ── Movement (joystick wins over keyboard if stronger) ────────────
-        if (Math.abs(this._stickX) > Math.abs(ic.moveX)) ic.moveX = this._stickX;
-        if (Math.abs(this._stickY) > Math.abs(ic.moveY)) ic.moveY = this._stickY;
+        // Deadzone matches InputController's gamepad threshold (0.2) — without
+        // it, thumb jitter near the fixed joystick's center reads as a real
+        // (if tiny) direction, which is far more noticeable on touch than on a
+        // physical stick that recenters precisely on its own.
+        const MOVE_DEADZONE = 0.2;
+        const dzStickX = Math.abs(this._stickX) > MOVE_DEADZONE ? this._stickX : 0;
+        const dzStickY = Math.abs(this._stickY) > MOVE_DEADZONE ? this._stickY : 0;
+        if (Math.abs(dzStickX) > Math.abs(ic.moveX)) ic.moveX = dzStickX;
+        if (Math.abs(dzStickY) > Math.abs(ic.moveY)) ic.moveY = dzStickY;
 
         // ── Aim angle: make hero face the direction the stick points ───────
         // This overrides the default mouse-cursor aiming on touch devices so
