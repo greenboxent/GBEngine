@@ -200,6 +200,8 @@ export default class GameFlowManager {
      * @public
      * @param {object} stats      Game stats forwarded to the LevelComplete scene.
      * @param {number} nextLevel  Level index to start when the player continues.
+     */
+    levelComplete(stats, nextLevel) {
         this.modal.openLevelComplete(stats, nextLevel);
         this.controller.scene.bringToTop(this.keys.controller);
     }
