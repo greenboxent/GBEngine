@@ -84,10 +84,12 @@ export default class BaseLoginScene extends Phaser.Scene {
 
         // Sign-in message
         const message = 'Sign in for cross-device scores & leaderboard';
-        this.add.text(cx, y, message, {
+        const messageText = this.add.text(cx, y, message, {
             fontSize: `${msgFs}px`, fontFamily: 'Arial', color: '#ffffff',
+            align: 'center',
+            wordWrap: { width: this.modal.panelWidth - this.modal.padding * 2, useAdvancedWrap: true },
         }).setOrigin(0.5).setDepth(100000);
-        y += btnGap;
+        y += Math.max(btnGap, messageText.height + lineH * 0.5);
 
         // Google sign-in
         createMenuButton(this, cx, y, 'Sign in with Google', async () => {
