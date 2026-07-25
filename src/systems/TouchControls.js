@@ -618,6 +618,12 @@ export class TouchControls {
      * @param {boolean} visible - True to show, false to hide.
      */
     setVisible(visible) {
+        // On non-touch devices the constructor returns early (before
+        // _staticGfx/_stickGfx are ever created) — without this guard, any
+        // caller doing `touchControls?.setVisible(...)` throws, since the
+        // instance itself is truthy even though it's inactive. Same guard
+        // already used by _drawStaticButtons()/_onResize().
+        if (!this.active) return;
         this._visible = visible;
 
         this._staticGfx.setVisible(visible);
@@ -647,6 +653,12 @@ export class TouchControls {
      * Call this from GameScene.shutdown() / destroy().
      */
     destroy() {
+        // On non-touch devices the constructor returns early — active is
+        // already false and _staticGfx/_stickGfx/_labels were never created,
+        // so there's nothing to clean up. The off() calls below are safe
+        // regardless (Phaser no-ops removing a listener that was never
+        // registered), but the graphics/label teardown is not.
+        const wasActive = this.active;
         this.active = false;
 
         this.scene.scale.off('resize', this._onResize, this);
@@ -655,6 +667,7 @@ export class TouchControls {
         this.scene.input.off('pointerup',     this._onUp,   this);
         this.scene.input.off('pointercancel', this._onUp,   this);
 
+        if (!wasActive) return;
         this._staticGfx.destroy();
         this._stickGfx.destroy();
         Object.values(this._labels).forEach(t => t.destroy());

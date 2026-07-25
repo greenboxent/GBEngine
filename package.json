@@ -1,6 +1,6 @@
 {
     "name": "@gamebase/gbengine",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "description": "Shared Phaser 4 game framework for Greenbox Entertainment games",
     "type": "module",
     "main": "src/index.js",
