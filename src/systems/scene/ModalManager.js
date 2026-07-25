@@ -418,6 +418,8 @@ export default class ModalManager {
         this._closingModals = this._closingModals || new Set();
         this._closingModals.delete(sceneKey);
 
+        console.log(`[ModalManager] openModal(${sceneKey}) — previousSceneKey: ${previousSceneKey}, prior state.previousScene: ${this.state.previousScene}, isActive(prev): ${previousSceneKey ? this.controller.scene.isActive(previousSceneKey) : 'n/a'}`);
+
         // Save previousScene if provided (needed for Settings)
         if (previousSceneKey) {
             this.state.previousScene = previousSceneKey;
