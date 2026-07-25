@@ -89,6 +89,7 @@ export default class ModalBase {
         // soft keyboard appearing/disappearing and must not trigger a rebuild.
         const onResize = (gameSize) => {
             if (Math.abs(gameSize.width - _lastW) < 30) return;
+            console.log(`[ModalBase:${scene.sys.settings.key}] resize width delta triggers restart-scheduling: ${_lastW} -> ${gameSize.width} (height ${_lastH} -> ${gameSize.height}), active=${scene.scene.isActive()}, sleeping=${scene.scene.isSleeping()}`);
             _lastW = gameSize.width;
             _lastH = gameSize.height;
 
@@ -99,6 +100,7 @@ export default class ModalBase {
                     // Read data at restart time — sys.settings.data is populated by Phaser
                     // when the scene was started via scene.start(key, data).
                     const d = scene.sys.settings.data;
+                    console.log(`[ModalBase:${scene.sys.settings.key}] restarting scene now (resize)`);
                     scene.scene.restart(d && Object.keys(d).length ? d : undefined);
                 }, 400);
             }
@@ -113,6 +115,7 @@ export default class ModalBase {
             }
             if (Math.abs(scene.scale.width - builtW) >= 30) {
                 // Screen width changed while we were sleeping — rebuild
+                console.log(`[ModalBase:${scene.sys.settings.key}] restarting scene now (wake, width changed ${builtW} -> ${scene.scale.width})`);
                 const d = scene.sys.settings.data;
                 setTimeout(() => scene.scene.restart(d && Object.keys(d).length ? d : undefined), 50);
             }

@@ -137,11 +137,17 @@ class FirebaseService {
             });
 
             // Permanent auth-state listener
+            // NOTE: logged with plain console.log (not Debug.log) on purpose —
+            // Debug.log/warn are silenced unless Ctrl+F1 debug mode is on,
+            // which is unreachable on touch-only Android devices, so this was
+            // the one call site giving zero field visibility into auth churn.
             onAuthStateChanged(this.auth, (user) => {
+                console.log(`[FirebaseService] onAuthStateChanged fired: ${user ? `${user.uid} (${user.isAnonymous ? 'anonymous' : user.providerData[0]?.providerId})` : 'null'} — current cached user: ${this.user?.uid ?? 'null'}`);
                 if (user && user.uid !== this.user?.uid) {
                     this.user = user;
                     Debug.log('FirebaseService', `Auth state changed: ${user.uid}`);
                 } else if (!user && this.user) {
+                    console.warn(`[FirebaseService] Auth state changed: signed out (was ${this.user.uid})`);
                     Debug.warn('FirebaseService', 'Auth state changed: signed out');
                     this.user = null;
                 }
@@ -187,14 +193,17 @@ class FirebaseService {
     async signInWithGoogle() {
         try {
             if (this._isNative) {
+                console.log('[FirebaseService] signInWithGoogle: calling native FirebaseAuthentication.signInWithGoogle()');
                 const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
                 const nativeResult = await FirebaseAuthentication.signInWithGoogle();
+                console.log(`[FirebaseService] signInWithGoogle: native result received, hasIdToken=${!!nativeResult?.credential?.idToken}`);
                 if (!nativeResult?.credential?.idToken)
                     return { success: false, error: 'No ID token from native sign-in' };
                 const { GoogleAuthProvider, signInWithCredential } = await import('firebase/auth');
                 const credential = GoogleAuthProvider.credential(nativeResult.credential.idToken);
                 const uc = await signInWithCredential(this.auth, credential);
                 this.user = uc.user;
+                console.log(`[FirebaseService] signInWithGoogle: JS signInWithCredential resolved, uid=${this.user.uid}`);
                 return { success: true, user: this.user };
             } else {
                 const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
