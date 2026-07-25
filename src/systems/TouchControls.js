@@ -499,6 +499,12 @@ export class TouchControls {
     update(ic) {
         if (!this.active) return;
 
+        // Lets Player-side code skip any built-in acceleration ramp for touch
+        // steering specifically — a thumb on glass already IS the analog
+        // input, so smoothing on top of it just reads as input lag, unlike a
+        // physical joystick/keyboard where ramping feels natural.
+        ic.touchSteering = this._joystickPointerId !== null;
+
         // ── Movement (joystick wins over keyboard if stronger) ────────────
         // Deadzone matches InputController's gamepad threshold (0.2) — without
         // it, thumb jitter near the fixed joystick's center reads as a real
