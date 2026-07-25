@@ -35,7 +35,19 @@ import TransitionManager  from '../systems/scene/TransitionManager.js';
 export default class BaseSceneController extends Phaser.Scene {
     /** @param {string} [key='SceneController'] */
     constructor(key = 'SceneController') {
-        super({ key, active: true });
+        // Not `active: true` — this scene is meant to be started explicitly by
+        // BootScene's `_onAllReady()` once Firebase/settings/ads are ready, per
+        // the class-level usage example. `active: true` here made Phaser
+        // auto-start it immediately at game boot (since it's registered in the
+        // same eager `scene: [...]` array as BootScene), racing BootScene's own
+        // async _onAllReady() chain. On a slow-booting game (e.g. one that also
+        // awaits ad-network/IAP init in _onAllReady, which can take 10+ seconds
+        // on Android) the premature auto-start reaches _onReady()/LoginScene
+        // almost instantly, the user signs in and reaches the main menu, and
+        // then BootScene's real (much later) `scene.start('SceneController')`
+        // call reruns create()/_onReady() a second time — appearing to the user
+        // as the sign-in screen randomly reappearing a few seconds after login.
+        super(key);
 
         /** @type {SceneStateManager|null}  */ this.stateManager      = null;
         /** @type {ModalManager|null}       */ this.modalManager      = null;
