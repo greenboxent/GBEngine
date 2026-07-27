@@ -8,6 +8,7 @@ import { createMenuButton, createTabs, createSlider, createSelector, createToggl
 import { InputController } from '../systems/InputController.js';
 import { Keybindings } from '../systems/KeybindingManager.js';
 import { Settings } from '../systems/SettingsManager.js';
+import { firebaseService } from '../systems/FirebaseService.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { ButtonTheme } from '../ui/styles/buttonTheme.js';
 import GamepadTestPanel from '../ui/GamepadTestPanel.js';
@@ -611,14 +612,24 @@ export default class BaseSettingsScene extends Phaser.Scene {
     /**
      * Show an HTML overlay for the player to set their display name.
      *
+     * Signed-in-with-Google players just edit a cosmetic display label (their
+     * UID is already a stable, real identity). Everyone else (anonymous/
+     * name+PIN players) also gets a PIN field — entering a name here signs
+     * out of the current identity and signs into that name+PIN pair via
+     * `firebaseService.signInWithNamePin()` (Firebase Auth's Email/Password
+     * provider under the hood), so it doubles as "claim this identity" (new
+     * name) or "switch to this identity" (existing name, matching PIN).
+     *
      * Subclasses can override these hooks:
-     *   _checkPlayerNameAvailable(name)  → Promise<boolean>  (default: always true)
+     *   _checkPlayerNameAvailable(name)  → Promise<boolean>  (default: always true; Google path only)
      *   _claimPlayerName(name, oldName)  → void              (default: no-op)
      *
      * @param {Phaser.GameObjects.Text} displayText - Phaser text object showing current name (unused by base, kept for compat).
      * @param {string} [googleDerivedName=''] - Default name suggested from Google account.
      */
     _showNameInput(displayText, googleDerivedName = '') {
+        const isGoogle = firebaseService.getAuthProvider() === 'google';
+
         const existing = document.getElementById('player-name-input-overlay');
         if (existing) existing.remove();
 
@@ -641,11 +652,13 @@ export default class BaseSettingsScene extends Phaser.Scene {
         ].join(';');
 
         const title = document.createElement('div');
-        title.textContent = 'Enter Player Name';
+        title.textContent = isGoogle ? 'Enter Player Name' : 'Enter Name & PIN';
         title.style.cssText = 'color:#ffffff;font-family:Arial;font-size:20px;font-weight:bold;';
 
         const hint = document.createElement('div');
-        hint.textContent = 'Letters, numbers, . - _ and at most one @ allowed';
+        hint.textContent = isGoogle
+            ? 'Letters, numbers, . - _ and at most one @ allowed'
+            : 'New name? This claims it. Returning to a name you have used before? Enter its matching PIN.';
         hint.style.cssText = 'color:#888888;font-family:Arial;font-size:13px;text-align:center;';
 
         const input = document.createElement('input');
@@ -656,13 +669,22 @@ export default class BaseSettingsScene extends Phaser.Scene {
         input.setAttribute('autocapitalize', 'none');
         input.setAttribute('spellcheck', 'false');
         input.value = localStorage.getItem('playerName') || googleDerivedName;
-        input.placeholder = 'Enter name (leave empty to opt out)';
-        input.style.cssText = [
+        input.placeholder = isGoogle ? 'Enter name (leave empty to opt out)' : 'Player name';
+        const fieldStyle = [
             'background:#1a1a1a', 'border:1px solid #555', 'border-radius:4px',
             'color:#ffffff', 'font-family:Arial', 'font-size:18px',
             'padding:8px 14px', 'width:240px', 'text-align:center',
             'outline:none', 'box-sizing:border-box',
         ].join(';');
+        input.style.cssText = fieldStyle;
+
+        const pinInput = document.createElement('input');
+        pinInput.type = 'password';
+        pinInput.inputMode = 'numeric';
+        pinInput.maxLength = 12;
+        pinInput.setAttribute('autocomplete', 'off');
+        pinInput.placeholder = 'PIN (6+ digits)';
+        pinInput.style.cssText = fieldStyle;
 
         const googleNote = document.createElement('div');
         if (googleDerivedName && !localStorage.getItem('playerName')) {
@@ -677,7 +699,7 @@ export default class BaseSettingsScene extends Phaser.Scene {
         btnRow.style.cssText = 'display:flex;gap:16px;margin-top:4px;';
 
         const saveBtn = document.createElement('button');
-        saveBtn.textContent = 'Save';
+        saveBtn.textContent = isGoogle ? 'Save' : 'Continue';
         saveBtn.style.cssText = 'background:#00ffcc;color:#000;border:none;border-radius:4px;padding:9px 28px;font-family:Arial;font-size:16px;cursor:pointer;';
 
         const cancelBtn = document.createElement('button');
@@ -691,9 +713,11 @@ export default class BaseSettingsScene extends Phaser.Scene {
             if (name.length < 2) return 'Name must be at least 2 characters';
             return '';
         };
+        const validatePin = (pin) => (/^\d{6,12}$/.test(pin) ? '' : 'PIN must be 6-12 digits');
 
         const closeOverlay = () => {
-            input.blur(); // dismiss keyboard before removing overlay
+            input.blur();
+            pinInput.blur(); // dismiss keyboard before removing overlay
             this.input.keyboard.enableGlobalCapture();
             overlay.remove();
             // After the soft keyboard fully animates out (~400ms), nudge Phaser's
@@ -724,19 +748,45 @@ export default class BaseSettingsScene extends Phaser.Scene {
             const name = input.value.trim();
             const err  = validate(name);
             if (err) { errorMsg.textContent = err; saved = false; return; }
-            if (name) {
+
+            if (isGoogle) {
+                if (name) {
+                    saveBtn.disabled = true;
+                    const origText = saveBtn.textContent;
+                    saveBtn.textContent = 'Checking\u2026';
+                    const available = await this._checkPlayerNameAvailable(name);
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = origText;
+                    if (!available) {
+                        errorMsg.textContent = 'That name is already taken. Please choose another.';
+                        saved = false;
+                        return;
+                    }
+                }
+            } else if (name) {
+                // Non-Google: a non-empty name is a real identity claim/switch,
+                // verified server-side by Firebase Auth \u2014 no separate
+                // availability pre-check (it would race against the uid this
+                // is about to switch into).
+                const pin    = pinInput.value.trim();
+                const pinErr = validatePin(pin);
+                if (pinErr) { errorMsg.textContent = pinErr; saved = false; return; }
+
                 saveBtn.disabled = true;
                 const origText = saveBtn.textContent;
-                saveBtn.textContent = 'Checking\u2026';
-                const available = await this._checkPlayerNameAvailable(name);
+                saveBtn.textContent = 'Signing in\u2026';
+                const result = await firebaseService.signInWithNamePin(name, pin);
                 saveBtn.disabled = false;
                 saveBtn.textContent = origText;
-                if (!available) {
-                    errorMsg.textContent = 'That name is already taken. Please choose another.';
+                if (!result.success) {
+                    errorMsg.textContent = result.error || 'Sign-in failed';
                     saved = false;
                     return;
                 }
+                // Re-key live settings/scores to the new identity before saving the name.
+                await Settings.load();
             }
+
             const oldName = localStorage.getItem('playerName') || '';
             localStorage.setItem('playerName', name);
             // Keep Settings._data.playerName in sync so save() will persist to Firebase.
@@ -751,14 +801,18 @@ export default class BaseSettingsScene extends Phaser.Scene {
         cancelBtn.addEventListener('click', closeOverlay);
         cancelBtn.addEventListener('touchend', (e) => { if (e.cancelable) e.preventDefault(); closeOverlay(); });
         overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay(); });
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter')  doSave();
-            if (e.key === 'Escape') closeOverlay();
+        [input, pinInput].forEach((el) => {
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter')  doSave();
+                if (e.key === 'Escape') closeOverlay();
+            });
+            el.addEventListener('input', () => { errorMsg.textContent = ''; });
         });
-        input.addEventListener('input', () => { errorMsg.textContent = ''; });
 
         btnRow.append(saveBtn, cancelBtn);
-        box.append(title, hint, input, googleNote, errorMsg, btnRow);
+        box.append(title, hint, input);
+        if (!isGoogle) box.append(pinInput);
+        box.append(googleNote, errorMsg, btnRow);
         overlay.appendChild(box);
         document.body.appendChild(overlay);
         setTimeout(() => input.focus(), 50);
