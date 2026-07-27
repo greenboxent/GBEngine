@@ -6,6 +6,20 @@
 
 import { Debug } from '../engine/Debug.js';
 
+/** Synthetic email domain used to turn a player name + PIN into a real Firebase Auth credential. */
+const NAME_AUTH_DOMAIN = 'players.gbent';
+
+/**
+ * Normalise a player name to a Firebase-safe key (also used as the local
+ * part of the synthetic name+PIN auth email — see {@link FirebaseService#signInWithNamePin}).
+ * Lowercases, replaces dots with `_dot_`, and strips `# $ [ ] /`.
+ * @param {string} name  Raw player name to sanitise.
+ * @returns {string}
+ */
+export function sanitizeNameKey(name) {
+    return name.toLowerCase().replace(/\./g, '_dot_').replace(/[#$[\]/]/g, '_');
+}
+
 /**
  * Unified Firebase initialisation and authentication service.
  *
@@ -226,6 +240,44 @@ class FirebaseService {
             return { success: true, user: this.user };
         } catch (error) {
             Debug.error('FirebaseService', 'Anonymous sign-in failed:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Sign in (or register, on first use) with a player name + PIN pair,
+     * via Firebase Auth's Email/Password provider using a synthetic email
+     * built from the sanitised name. This gives the pair a real,
+     * server-verified Firebase UID that's stable across devices/reinstalls
+     * — unlike anonymous sign-in, which mints a new random UID whenever the
+     * local session is lost (e.g. an app uninstall/reinstall).
+     *
+     * @param {string} name  Player-chosen display name.
+     * @param {string} pin   Player-chosen PIN (Firebase requires 6+ characters).
+     * @returns {Promise<{success: boolean, isNew?: boolean, user?: object, error?: string}>}
+     */
+    async signInWithNamePin(name, pin) {
+        const key   = sanitizeNameKey(name);
+        const email = `${key}@${NAME_AUTH_DOMAIN}`;
+        try {
+            const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import('firebase/auth');
+            try {
+                const uc = await createUserWithEmailAndPassword(this.auth, email, pin);
+                this.user = uc.user;
+                Debug.log('FirebaseService', `Name+PIN registered: ${this.user.uid}`);
+                return { success: true, isNew: true, user: this.user };
+            } catch (createErr) {
+                if (createErr.code !== 'auth/email-already-in-use') throw createErr;
+                const uc = await signInWithEmailAndPassword(this.auth, email, pin);
+                this.user = uc.user;
+                Debug.log('FirebaseService', `Name+PIN sign-in: ${this.user.uid}`);
+                return { success: true, isNew: false, user: this.user };
+            }
+        } catch (error) {
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                return { success: false, error: 'Incorrect PIN' };
+            }
+            Debug.error('FirebaseService', 'signInWithNamePin failed:', error);
             return { success: false, error: error.message };
         }
     }

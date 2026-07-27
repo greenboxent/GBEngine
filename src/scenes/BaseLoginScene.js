@@ -110,19 +110,16 @@ export default class BaseLoginScene extends Phaser.Scene {
         }, { fontSize: btnFs, padding: 10 });
         y += btnGap;
 
-        // Guest
+        // Guest — name + PIN identity. Firebase Auth verifies the PIN
+        // server-side (via a synthetic email/password credential), so the
+        // resulting UID is stable across devices and reinstalls, unlike
+        // plain anonymous sign-in.
         createMenuButton(this, cx, y, 'Play as Guest', async () => {
-            this.statusText?.setText('Signing in as guest...');
-            try {
-                const result = await this._fb?.signInAnonymously();
-                if (result?.success) {
-                    await this._onLoginComplete(result.user);
-                } else {
-                    await this._onLoginComplete(null);
-                }
-            } catch (err) {
-                await this._onLoginComplete(null);
-            }
+            const result = await this._showNamePinPrompt();
+            if (!result) return; // cancelled
+            localStorage.setItem('playerName', result.name);
+            this.statusText?.setText('Loading your data...');
+            await this._onLoginComplete(result.user);
         }, { fontSize: btnFs, padding: 10 });
         y += btnGap;
 
@@ -181,5 +178,187 @@ export default class BaseLoginScene extends Phaser.Scene {
      */
     _setupInput() {
         this.inputController = new InputController(this, {});
+    }
+
+    // -------------------------------------------------------------------------
+    // Name + PIN popup (Guest sign-in)
+    // -------------------------------------------------------------------------
+
+    /**
+     * HTML overlay collecting a player name + PIN, then signing in via
+     * `firebaseService.signInWithNamePin()`. On a new name it claims it; on
+     * an existing name it verifies the PIN. Wrong-PIN and other failures are
+     * shown inline and the prompt stays open for another attempt.
+     *
+     * Mirrors the DOM-overlay pattern used by `BaseSettingsScene._showNameInput`
+     * (disable Phaser's global keyboard capture while the overlay is open,
+     * append a fixed-position styled div to `document.body`, restore capture
+     * and nudge the canvas scale back on close).
+     *
+     * @returns {Promise<{name: string, user: object}|null>}  null if cancelled.
+     * @private
+     */
+    _showNamePinPrompt() {
+        return new Promise((resolve) => {
+            const existing = document.getElementById('name-pin-input-overlay');
+            if (existing) existing.remove();
+
+            this.input.keyboard.disableGlobalCapture();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'name-pin-input-overlay';
+            overlay.style.cssText = [
+                'position:fixed', 'top:0', 'left:0', 'right:0', 'bottom:0',
+                'background:rgba(0,0,0,0.78)',
+                'display:flex', 'align-items:center', 'justify-content:center',
+                'z-index:99999',
+            ].join(';');
+
+            const box = document.createElement('div');
+            box.style.cssText = [
+                'background:#2a2a2a', 'border:2px solid #00ffcc', 'border-radius:8px',
+                'padding:28px 32px', 'display:flex', 'flex-direction:column',
+                'align-items:center', 'gap:14px', 'min-width:300px', 'max-width:90vw',
+            ].join(';');
+
+            const title = document.createElement('div');
+            title.textContent = 'Enter Name & PIN';
+            title.style.cssText = 'color:#ffffff;font-family:Arial;font-size:20px;font-weight:bold;';
+
+            const hint = document.createElement('div');
+            hint.textContent = 'New name? This claims it. Returning? Enter the same PIN to load your data.';
+            hint.style.cssText = 'color:#888888;font-family:Arial;font-size:13px;text-align:center;';
+
+            const fieldStyle = [
+                'background:#1a1a1a', 'border:1px solid #555', 'border-radius:4px',
+                'color:#ffffff', 'font-family:Arial', 'font-size:18px',
+                'padding:8px 14px', 'width:240px', 'text-align:center',
+                'outline:none', 'box-sizing:border-box',
+            ].join(';');
+
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.maxLength = 30;
+            nameInput.setAttribute('autocorrect', 'off');
+            nameInput.setAttribute('autocomplete', 'off');
+            nameInput.setAttribute('autocapitalize', 'none');
+            nameInput.setAttribute('spellcheck', 'false');
+            nameInput.value = localStorage.getItem('playerName') || '';
+            nameInput.placeholder = 'Player name';
+            nameInput.style.cssText = fieldStyle;
+
+            const pinInput = document.createElement('input');
+            pinInput.type = 'password';
+            pinInput.inputMode = 'numeric';
+            pinInput.maxLength = 12;
+            pinInput.setAttribute('autocomplete', 'off');
+            pinInput.placeholder = 'PIN (6+ digits)';
+            pinInput.style.cssText = fieldStyle;
+
+            const errorMsg = document.createElement('div');
+            errorMsg.style.cssText = 'color:#ff6666;font-family:Arial;font-size:13px;min-height:16px;';
+
+            const btnRow = document.createElement('div');
+            btnRow.style.cssText = 'display:flex;gap:16px;margin-top:4px;';
+
+            const continueBtn = document.createElement('button');
+            continueBtn.textContent = 'Continue';
+            continueBtn.style.cssText = 'background:#00ffcc;color:#000;border:none;border-radius:4px;padding:9px 28px;font-family:Arial;font-size:16px;cursor:pointer;';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.style.cssText = 'background:#555;color:#fff;border:none;border-radius:4px;padding:9px 28px;font-family:Arial;font-size:16px;cursor:pointer;';
+
+            const validateName = (name) => {
+                if (!name) return 'Enter a name';
+                if ((name.match(/@/g) || []).length > 1) return 'Only one @ sign is allowed';
+                if (!/^[a-zA-Z0-9._@-]+$/.test(name)) return 'Only letters, numbers, . - _ and @ are allowed';
+                if (name.length < 2) return 'Name must be at least 2 characters';
+                return '';
+            };
+            const validatePin = (pin) => (/^\d{6,12}$/.test(pin) ? '' : 'PIN must be 6-12 digits');
+
+            let closed = false;
+            const closeOverlay = () => {
+                if (closed) return;
+                closed = true;
+                nameInput.blur();
+                pinInput.blur(); // dismiss keyboard before removing overlay
+                this.input.keyboard.enableGlobalCapture();
+                overlay.remove();
+                // After the soft keyboard fully animates out (~400ms), nudge Phaser's
+                // ScaleManager to re-measure window dimensions and snap the canvas back.
+                const fixScale = () => {
+                    window.scrollTo(0, 0);
+                    document.documentElement.scrollTop = 0;
+                    document.body.scrollTop = 0;
+                    window.dispatchEvent(new Event('resize'));
+                };
+                setTimeout(fixScale, 450);
+                setTimeout(fixScale, 800);
+                // Disable Phaser input briefly so ghost touches don't hit Phaser buttons.
+                if (this.input) this.input.enabled = false;
+                this.time.delayedCall(900, () => {
+                    if (this.input) this.input.enabled = true;
+                });
+            };
+
+            // Prevent taps inside the box from bubbling to the overlay dismiss handler
+            box.addEventListener('pointerdown', (e) => e.stopPropagation());
+            box.addEventListener('touchstart',  (e) => e.stopPropagation());
+
+            let submitting = false;
+            const doContinue = async () => {
+                if (submitting) return;
+                const name = nameInput.value.trim();
+                const pin  = pinInput.value.trim();
+                const nameErr = validateName(name);
+                const pinErr  = validatePin(pin);
+                if (nameErr || pinErr) { errorMsg.textContent = nameErr || pinErr; return; }
+
+                submitting = true;
+                continueBtn.disabled = true;
+                const origText = continueBtn.textContent;
+                continueBtn.textContent = 'Signing in…';
+                errorMsg.textContent = '';
+
+                const result = await this._fb?.signInWithNamePin(name, pin);
+
+                submitting = false;
+                continueBtn.disabled = false;
+                continueBtn.textContent = origText;
+
+                if (!result?.success) {
+                    errorMsg.textContent = result?.error || 'Sign-in failed';
+                    return;
+                }
+                closeOverlay();
+                resolve({ name, user: result.user });
+            };
+
+            const doCancel = () => {
+                closeOverlay();
+                resolve(null);
+            };
+
+            continueBtn.addEventListener('click', doContinue);
+            continueBtn.addEventListener('touchend', (e) => { if (e.cancelable) e.preventDefault(); doContinue(); });
+            cancelBtn.addEventListener('click', doCancel);
+            cancelBtn.addEventListener('touchend', (e) => { if (e.cancelable) e.preventDefault(); doCancel(); });
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) doCancel(); });
+            [nameInput, pinInput].forEach((el) => {
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter')  doContinue();
+                    if (e.key === 'Escape') doCancel();
+                });
+                el.addEventListener('input', () => { errorMsg.textContent = ''; });
+            });
+
+            btnRow.append(continueBtn, cancelBtn);
+            box.append(title, hint, nameInput, pinInput, errorMsg, btnRow);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+            setTimeout(() => nameInput.focus(), 50);
+        });
     }
 }

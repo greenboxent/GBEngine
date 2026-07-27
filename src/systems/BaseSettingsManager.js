@@ -5,6 +5,7 @@
  */
 
 import { Debug } from '../engine/Debug.js';
+import { sanitizeNameKey } from './FirebaseService.js';
 
 /**
  * Base class for cross-device settings persistence.
@@ -216,7 +217,7 @@ export class BaseSettingsManager {
      * @returns {string}
      */
     _sanitizeNameKey(name) {
-        return name.toLowerCase().replace(/\./g, '_dot_').replace(/[#$[\]/]/g, '_');
+        return sanitizeNameKey(name);
     }
 
     /**
