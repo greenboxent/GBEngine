@@ -78,7 +78,22 @@ export default class ModalManager {
      * @returns {void}
      */
     enableUnderlyingInput() {
-        const underlying = this.state.getUnderlyingSceneKey();
+        let underlying = this.state.getUnderlyingSceneKey();
+
+        // getUnderlyingSceneKey() only matches scenes Phaser reports as
+        // active === true. Pause/LevelComplete/GameOver all leave GameScene
+        // Phaser-*paused* (not stopped) while they're open, so right here —
+        // before whichever caller resumes it — it won't be found by that
+        // lookup and this whole method would silently no-op, leaving
+        // GameScene's input disabled and its InputController still bound to
+        // the modal that's closing. resumeGame() already works around the
+        // identical gap by rebinding GameScene explicitly instead of trusting
+        // this lookup; fall back the same way here so every close path
+        // (closeGameOver, closeLevelComplete, closeModal) gets the fix too.
+        if (!underlying && this.controller.scene.isPaused(this.keys.game)) {
+            underlying = this.keys.game;
+        }
+
         console.log(`[ModalManager] enableUnderlyingInput - underlying: ${underlying}`);
         if (!underlying) return;
 
