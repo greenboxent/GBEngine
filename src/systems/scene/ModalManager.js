@@ -128,6 +128,45 @@ export default class ModalManager {
         this.controller.scene.bringToTop(this.keys.controller);
     }
 
+    /**
+     * Waits for `sceneKey`'s `wake()` to actually take effect.
+     *
+     * `Phaser.Scenes.ScenePlugin#wake` (the `this.scene.wake()` API used
+     * throughout this class) only *queues* the wake — it is processed on the
+     * next `SceneManager` tick, not synchronously — despite reading like an
+     * immediate call. Every caller here used to paper over that with a fixed
+     * `setTimeout(resolve, 16)` guess at "one frame," which is not a reliable
+     * proxy for "the queued op has actually run": under load (a busy tab, a
+     * throttled/backgrounded WebView, a slower device) a real frame can take
+     * longer than 16ms, so the very next `isActive()`/`isSleeping()` check —
+     * e.g. in `closeGameOver()` right after `closeModal()` wakes GameOverScene
+     * back up — can still read the pre-wake status and silently skip closing
+     * the scene, leaving it stuck visible on top of gameplay forever. Waiting
+     * on the scene's own `wake` event (emitted synchronously by
+     * `Systems#wake` once the queued op is actually processed) removes the
+     * guesswork; the timeout is just a safety net against a queued op that
+     * never gets processed for some unforeseen reason.
+     *
+     * @private
+     * @param {string} sceneKey
+     * @returns {Promise<void>}
+     */
+    _awaitWake(sceneKey) {
+        const scene = this.controller.scene.get(sceneKey);
+        if (!scene) return Promise.resolve();
+
+        return new Promise(resolve => {
+            let settled = false;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                resolve();
+            };
+            scene.events.once('wake', finish);
+            setTimeout(finish, 500);
+        });
+    }
+
     // -------------------------------------------------------------------------
     // PAUSE
     // -------------------------------------------------------------------------
@@ -280,10 +319,9 @@ export default class ModalManager {
                 if (this.controller.scene.isSleeping(previousScene)) {
                     console.log(`[ModalManager] Waking ${previousScene}`);
                     this.controller.scene.wake(previousScene);
-                    // Wait a frame using native timer (avoids Phaser game-loop dependency)
-                    await new Promise(resolve => setTimeout(resolve, 16));
+                    await this._awaitWake(previousScene);
                 }
-                
+
                 // Enable input and rebind InputController to previous scene
                 const prevScene = this.controller.scene.get(previousScene);
                 if (prevScene) {
@@ -291,7 +329,7 @@ export default class ModalManager {
                     if (prevScene.input) {
                         prevScene.input.enabled = true;
                     }
-                    
+
                     // Rebind InputController
                     if (prevScene.inputController) {
                         console.log(`[ModalManager] closeSettings - Rebinding InputController to ${previousScene}`);
@@ -448,8 +486,7 @@ export default class ModalManager {
         
         if (wasWoken) {
             this.controller.scene.wake(sceneKey, data);
-            // Wait a frame using native timer (avoids Phaser game-loop dependency)
-            await new Promise(resolve => setTimeout(resolve, 16));
+            await this._awaitWake(sceneKey);
         } else {
             this.controller.scene.launch(sceneKey, data);
         }
@@ -500,10 +537,9 @@ export default class ModalManager {
                 
                 if (this.controller.scene.isSleeping(previousScene)) {
                     this.controller.scene.wake(previousScene);
-                    // Wait a frame using native timer (avoids Phaser game-loop dependency)
-                    await new Promise(resolve => setTimeout(resolve, 16));
+                    await this._awaitWake(previousScene);
                 }
-                
+
                 // Enable input and rebind
                 const prevScene = this.controller.scene.get(previousScene);
                 if (prevScene) {
@@ -519,7 +555,7 @@ export default class ModalManager {
                         }
                     }
                 }
-                
+
                 this.state.previousScene = null; // Clear it
             } else {
                 // Standard modal close - enable underlying input

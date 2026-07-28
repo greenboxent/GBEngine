@@ -370,12 +370,24 @@ export default class GameFlowManager {
      * @returns {Promise<void>}
      */
     async resumeFromGameOver() {
-        await this.modal.closeGameOver();
-        const gameScene = this.controller.scene.get(this.keys.game);
-        if (gameScene && typeof gameScene.revivePlayer === 'function') {
-            gameScene.revivePlayer();
+        // Reentrancy guard: a duplicate invocation (double-tap producing two
+        // pointerdown events, touch+compat-mouse duplicate events on some
+        // WebViews, etc.) would otherwise run this concurrently with itself —
+        // the second call could observe GameOverScene mid-transition and skip
+        // closing it while still reviving the player, leaving Game Over stuck
+        // visible over a running level.
+        if (this._resumingFromGameOver) return;
+        this._resumingFromGameOver = true;
+        try {
+            await this.modal.closeGameOver();
+            const gameScene = this.controller.scene.get(this.keys.game);
+            if (gameScene && typeof gameScene.revivePlayer === 'function') {
+                gameScene.revivePlayer();
+            }
+            this.controller.scene.bringToTop(this.keys.controller);
+        } finally {
+            this._resumingFromGameOver = false;
         }
-        this.controller.scene.bringToTop(this.keys.controller);
     }
 
     // -------------------------------------------------------------------------
