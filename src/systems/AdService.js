@@ -2,7 +2,7 @@
  * @module systems/AdService
  */
 
-import { AdMob } from '@capacitor-community/admob';
+import { AdMob, RewardAdPluginEvents } from '@capacitor-community/admob';
 import { Capacitor } from '@capacitor/core';
 import { Settings } from './SettingsManager.js';
 import { SoundManager } from './SoundManager.js';
@@ -190,8 +190,48 @@ class AdServiceClass {
     }
 
     /**
+     * Waits for the native rewarded-ad overlay to actually close.
+     *
+     * `AdMob.showRewardVideoAd()`'s promise resolves from the SDK's
+     * `OnUserEarnedRewardListener` — fired the moment the reward *threshold*
+     * is reached, not when the ad's own UI is dismissed (that's the separate
+     * `onRewardedVideoAdDismissed` event/`onAdDismissedFullScreenContent`
+     * callback, which can fire several seconds later: end-cards, the user
+     * needing to tap to close, etc.). A caller that reacts to the reward
+     * immediately — e.g. reviving a dead player — does so while the ad is
+     * still fully covering the screen: gameplay resumes and runs unattended,
+     * invisibly, for however long the ad has left. Confirmed in the field
+     * (Balloonatics): the revived player died again behind the still-open ad
+     * before it ever closed, so Game Over was already back by the time the
+     * player could see or touch anything. `showRewarded()` now waits for this
+     * event before resolving so callers only ever act once the app is
+     * actually visible and interactive again.
+     * @private
+     * @returns {Promise<void>}
+     */
+    _awaitRewardedDismissed() {
+        return new Promise(resolve => {
+            let settled = false;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                resolve();
+            };
+            AdMob.addListener(RewardAdPluginEvents.Dismissed, finish).then(handle => {
+                if (settled) handle.remove();
+            });
+            // Fallback in case the event never fires for some unforeseen
+            // reason (e.g. a web/no-op AdMob stub) — don't hang forever.
+            setTimeout(finish, 5000);
+        });
+    }
+
+    /**
      * Show a rewarded ad and resolve with whether the user earned the reward.
      * Returns false immediately if no ad is loaded or not on Android.
+     * Does not resolve until the ad's UI has actually closed — see
+     * `_awaitRewardedDismissed()` — so it's safe for the caller to act on the
+     * reward (resume gameplay, revive a player, etc.) as soon as this returns.
      *
      * @returns {Promise<boolean>} true if the user watched to completion and earned reward
      */
@@ -205,7 +245,9 @@ class AdServiceClass {
                 setTimeout(() => reject(new Error('showRewarded timeout')), 35000));
             const reward = await Promise.race([AdMob.showRewardVideoAd(), timeout]);
             // resolves with AdMobRewardItem { type, amount } when reward is earned
-            return reward != null;
+            const earned = reward != null;
+            if (earned) await this._awaitRewardedDismissed();
+            return earned;
         } catch (e) {
             // Throws when the user dismisses early or ad fails to show
             console.warn('[AdService] showRewardVideoAd failed or dismissed:', e?.message ?? e);
