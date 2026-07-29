@@ -81,6 +81,7 @@ export default class ModalBase {
         const builtH = scene.scale.height;
 
         let _resizeTimer = null;
+        let _wakeRestartTimer = null;
         let _lastW = builtW;
         let _lastH = builtH;
 
@@ -114,10 +115,24 @@ export default class ModalBase {
                 _lastH = scene.scale.height;
             }
             if (Math.abs(scene.scale.width - builtW) >= 30) {
-                // Screen width changed while we were sleeping — rebuild
+                // Screen width changed while we were sleeping — rebuild.
+                //
+                // This wake can be transient: ModalManager.closeModal()'s
+                // previousScene handling wakes a scene like GameOverScene for
+                // just long enough to rebind its input before immediately
+                // closing it again (e.g. Store -> "Resume Level" waking
+                // GameOverScene only to stop() it a moment later). Without
+                // clearTimeout below, that stop()/shutdown does nothing to
+                // this pending restart — it fires anyway ~50ms later, fully
+                // rebuilding a scene that was mid-close, resurrecting it as
+                // active and visible on top of whatever resumed underneath.
+                // Confirmed via device logs: closeGameOver() genuinely emits
+                // SHUTDOWN, then this orphaned timer calls scene.restart()
+                // moments later and undoes it.
                 if (window.Debug?.core?.enabled) console.log(`[ModalBase:${scene.sys.settings.key}] restarting scene now (wake, width changed ${builtW} -> ${scene.scale.width})`);
                 const d = scene.sys.settings.data;
-                setTimeout(() => scene.scene.restart(d && Object.keys(d).length ? d : undefined), 50);
+                clearTimeout(_wakeRestartTimer);
+                _wakeRestartTimer = setTimeout(() => scene.scene.restart(d && Object.keys(d).length ? d : undefined), 50);
             }
         };
 
@@ -128,6 +143,7 @@ export default class ModalBase {
             scene.scale.off('resize', onResize);
             scene.events.off('wake', onWake);
             clearTimeout(_resizeTimer);
+            clearTimeout(_wakeRestartTimer);
         });
     }
 
