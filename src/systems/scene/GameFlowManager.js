@@ -94,7 +94,7 @@ export default class GameFlowManager {
         if (gameScene && gameScene.stopAllGameMechanics) {
             gameScene.stopAllGameMechanics();
         }
-        if (gameScene && (this.controller.scene.isActive(K.game) || this.controller.scene.isSleeping(K.game))) {
+        if (gameScene && this._isGameSceneLive()) {
             if (gameScene.sound) gameScene.sound.stopAll();
             this.controller.scene.stop(K.game);
         }
@@ -109,6 +109,22 @@ export default class GameFlowManager {
         await this.transition.fadeInScene(K.game, 200);
 
         this.controller.scene.bringToTop(K.controller);
+    }
+
+    /**
+     * True when GameScene is running, paused or sleeping — i.e. anything that
+     * still needs stopping before starting a level or showing the main menu.
+     * Paused matters: GameScene is left paused under LevelComplete/GameOver,
+     * and Pause > Main Menu reaches here before closeAllModals()'s queued
+     * resume has run. Missing it left the old level alive on top of the menus.
+     *
+     * @private
+     * @returns {boolean}
+     */
+    _isGameSceneLive() {
+        const K = this.keys;
+        const sm = this.controller.scene;
+        return sm.isActive(K.game) || sm.isPaused(K.game) || sm.isSleeping(K.game);
     }
 
     // -------------------------------------------------------------------------
@@ -129,8 +145,10 @@ export default class GameFlowManager {
             gameScene.stopAllGameMechanics();
         }
 
-        if (gameScene && (this.controller.scene.isActive(K.game) || this.controller.scene.isSleeping(K.game))) {
+        if (gameScene && this._isGameSceneLive()) {
             if (gameScene.sound) gameScene.sound.stopAll();
+            // Only fade a running scene — a paused one doesn't step, so its
+            // camera fade would never complete.
             if (this.controller.scene.isActive(K.game)) {
                 await this.transition.fadeOutScene(K.game, 200);
             }
