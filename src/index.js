@@ -25,6 +25,7 @@ export { SoundManager }      from './systems/SoundManager.js';
 export { TouchControls }     from './systems/TouchControls.js';
 export { default as WaveManager } from './systems/WaveManager.js';
 export { spawnDamageText }   from './systems/DamageText.js';
+export { containsProfanity } from './systems/ProfanityFilter.js';
 export * from './systems/Pathfinding.js';           // findPath, worldToGrid, gridToWorld
 export { createAnimations, debugAnimations } from './systems/animations.js';
 

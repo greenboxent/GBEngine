@@ -34,6 +34,7 @@ Shared Phaser 4 game framework for Greenbox Entertainment games.
 | `spawnDamageText` | Floating damage number visual effect |
 | `findPath` | A* pathfinding for grid/maze navigation |
 | `createAnimations` / `debugAnimations` | Spritesheet animation loader |
+| `containsProfanity` | Player-name vulgarity/slur check (leetspeak-aware); used by the Settings name dialog |
 
 ### Scene management
 
@@ -110,6 +111,17 @@ export default class BootScene extends BaseBootScene {
         ScoreManager.configure({ grunt: 100, boss: 1000 });
         this.scene.start('SceneController');
     }
+}
+```
+
+## Player names (`playerNames` index)
+
+Names are unique per Firebase project. Name+PIN accounts are unique through Firebase Auth (`<name>@players.gbent`); Google players' display names and name+PIN names share the `playerNames/<sanitised name>` → uid index, which `FirebaseService.signInWithNamePin()` and the Settings name dialog check and write. Each game's database rules must include it, or the checks silently fail open:
+
+```json
+"playerNames": {
+  ".read": "auth != null",
+  "$key": { ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && (!newData.exists() || newData.val() === auth.uid)" }
 }
 ```
 

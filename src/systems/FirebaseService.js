@@ -252,6 +252,13 @@ class FirebaseService {
      * — unlike anonymous sign-in, which mints a new random UID whenever the
      * local session is lost (e.g. an app uninstall/reinstall).
      *
+     * Names are also recorded in the `playerNames/<key>` index (uid owner),
+     * which Google-signed-in players' display names share — so a name taken
+     * there is never registered as a second, separate name+PIN account. The
+     * game's database rules must allow it (see GBEngine README / Balloonatics
+     * database.rules.json): read for any signed-in user, write only to an
+     * unclaimed key or one the writer already owns.
+     *
      * @param {string} name  Player-chosen display name.
      * @param {string} pin   Player-chosen PIN (Firebase requires 6+ characters).
      * @returns {Promise<{success: boolean, isNew?: boolean, user?: object, error?: string}>}
@@ -261,24 +268,79 @@ class FirebaseService {
         const email = `${key}@${NAME_AUTH_DOMAIN}`;
         try {
             const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import('firebase/auth');
-            try {
-                const uc = await createUserWithEmailAndPassword(this.auth, email, pin);
-                this.user = uc.user;
-                Debug.log('FirebaseService', `Name+PIN registered: ${this.user.uid}`);
-                return { success: true, isNew: true, user: this.user };
-            } catch (createErr) {
-                if (createErr.code !== 'auth/email-already-in-use') throw createErr;
-                const uc = await signInWithEmailAndPassword(this.auth, email, pin);
-                this.user = uc.user;
-                Debug.log('FirebaseService', `Name+PIN sign-in: ${this.user.uid}`);
-                return { success: true, isNew: false, user: this.user };
+            // A name already in the index belongs to someone — this name's own
+            // PIN account, or a player using it as a display name. Either way,
+            // only signing in to the existing account is allowed.
+            const owner = await this._getNameOwner(key);
+            if (!owner) {
+                try {
+                    const uc = await createUserWithEmailAndPassword(this.auth, email, pin);
+                    this.user = uc.user;
+                    await this._claimName(key);
+                    Debug.log('FirebaseService', `Name+PIN registered: ${this.user.uid}`);
+                    return { success: true, isNew: true, user: this.user };
+                } catch (createErr) {
+                    if (createErr.code !== 'auth/email-already-in-use') throw createErr;
+                }
             }
+            let uc;
+            try {
+                uc = await signInWithEmailAndPassword(this.auth, email, pin);
+            } catch (signInErr) {
+                const badCredential = ['auth/wrong-password', 'auth/invalid-credential', 'auth/user-not-found']
+                    .includes(signInErr.code);
+                if (owner && badCredential) {
+                    return { success: false, error: 'That name is taken. If it is yours, check your PIN.' };
+                }
+                throw signInErr;
+            }
+            this.user = uc.user;
+            // Accounts registered before the index was enforced get added now.
+            if (!owner) await this._claimName(key);
+            else if (owner !== this.user.uid) Debug.warn('FirebaseService', `Name "${key}" is also indexed to ${owner}`);
+            Debug.log('FirebaseService', `Name+PIN sign-in: ${this.user.uid}`);
+            return { success: true, isNew: false, user: this.user };
         } catch (error) {
             if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                 return { success: false, error: 'Incorrect PIN' };
             }
             Debug.error('FirebaseService', 'signInWithNamePin failed:', error);
             return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Owner uid of `playerNames/<key>`, or null if unclaimed. Also null if the
+     * index can't be read (offline, or the game's rules don't include it) —
+     * Firebase Auth still keeps name+PIN accounts unique in that case.
+     * @private
+     * @param {string} key  Sanitised name key.
+     * @returns {Promise<string|null>}
+     */
+    async _getNameOwner(key) {
+        if (!this.firebaseDB || !this.firebaseFunctions) return null;
+        try {
+            const { ref, get } = this.firebaseFunctions;
+            const snap = await get(ref(this.firebaseDB, `playerNames/${key}`));
+            return snap.exists() ? snap.val() : null;
+        } catch (error) {
+            Debug.warn('FirebaseService', 'playerNames index unreadable:', error?.message);
+            return null;
+        }
+    }
+
+    /**
+     * Records the signed-in user as the owner of `playerNames/<key>`.
+     * @private
+     * @param {string} key  Sanitised name key.
+     */
+    async _claimName(key) {
+        if (!this.firebaseDB || !this.firebaseFunctions || !this.user) return;
+        try {
+            const { ref, set } = this.firebaseFunctions;
+            await set(ref(this.firebaseDB, `playerNames/${key}`), this.user.uid);
+        } catch (error) {
+            Debug.warn('FirebaseService', 'playerNames claim failed:', error?.message);
         }
     }
 

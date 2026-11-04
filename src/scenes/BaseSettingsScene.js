@@ -9,6 +9,7 @@ import { InputController } from '../systems/InputController.js';
 import { Keybindings } from '../systems/KeybindingManager.js';
 import { Settings } from '../systems/SettingsManager.js';
 import { firebaseService } from '../systems/FirebaseService.js';
+import { containsProfanity } from '../systems/ProfanityFilter.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { ButtonTheme } from '../ui/styles/buttonTheme.js';
 import GamepadTestPanel from '../ui/GamepadTestPanel.js';
@@ -711,6 +712,7 @@ export default class BaseSettingsScene extends Phaser.Scene {
             if ((name.match(/@/g) || []).length > 1) return 'Only one @ sign is allowed';
             if (!/^[a-zA-Z0-9._@-]+$/.test(name)) return 'Only letters, numbers, . - _ and @ are allowed';
             if (name.length < 2) return 'Name must be at least 2 characters';
+            if (containsProfanity(name)) return 'Please choose a different name';
             return '';
         };
         const validatePin = (pin) => (/^\d{6,12}$/.test(pin) ? '' : 'PIN must be 6-12 digits');
@@ -819,16 +821,22 @@ export default class BaseSettingsScene extends Phaser.Scene {
     }
 
     /**
-     * Override in subclass to check if a player name is available.
+     * Whether a player name is free in the shared `playerNames` index (or
+     * already this player's). Override in a subclass to change the check.
      * @param {string} name  Player name to test for availability.
      * @returns {Promise<boolean>}
      */
-    async _checkPlayerNameAvailable(name) { return true; }
+    async _checkPlayerNameAvailable(name) {
+        return Settings.checkPlayerNameAvailable?.(name) ?? true;
+    }
 
     /**
-     * Override in subclass to claim/register a player name.
+     * Registers a player name in the shared `playerNames` index, releasing
+     * the old one. Override in a subclass to change it.
      * @param {string} newName          New display name to register.
      * @param {string|null} oldName     Previous name to release, or null.
      */
-    _claimPlayerName(newName, oldName) {}
+    _claimPlayerName(newName, oldName) {
+        Settings.claimPlayerName?.(newName, oldName);
+    }
 }
