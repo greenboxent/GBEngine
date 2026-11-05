@@ -209,6 +209,21 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
 
     // Base color tracks the most recent color set by updateSelection().
     container._baseColor = color;
+    container._normalColor = color;
+    container._normalScale = scale;
+
+    // A tap that opens another scene sleeps/pauses this one before the
+    // pointerout arrives, leaving the button stuck in its hover look (bigger,
+    // hover colour) when the scene comes back. Drop any leftover hover state
+    // on wake/resume.
+    const clearHover = () => {
+        if (!container.scene) return;
+        scene.tweens.killTweensOf(container);
+        container.scale = scale;
+        btn.setColor(container._baseColor);
+    };
+    scene.events.on('wake', clearHover);
+    scene.events.on('resume', clearHover);
 
     // When this container is destroyed (e.g. tabContent.removeAll(true) during a
     // settings tab refresh), remove it from the scene-wide selected-button registry.
@@ -218,6 +233,8 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
         if (_sceneSelectedButton.get(scene) === container) {
             _sceneSelectedButton.delete(scene);
         }
+        scene.events.off('wake', clearHover);
+        scene.events.off('resume', clearHover);
     });
 
     // Add compatibility methods for existing code
@@ -237,4 +254,36 @@ export function createButton(scene, x, y, text, onClick, options = {}) {
     };
 
     return container;
+}
+
+/**
+ * Menu-list selection look (Main Menu, Pause, Game Over, Level Complete): the
+ * button at `index` is shown active and the rest dimmed, per
+ * `ButtonTheme.menu`. Every button is reset to its normal scale, so a stale
+ * hover can't leave one larger or differently coloured than its siblings.
+ *
+ * Pass `select` to make hovering or tapping a button select it — the
+ * highlight then follows the pointer, and a tapped button is still the
+ * selected one when the scene comes back from whatever it opened.
+ *
+ * @param {Phaser.GameObjects.Container[]} buttons  Buttons from `createButton`/`createMenuButton`.
+ * @param {number} index  Index of the selected button.
+ * @param {(index: number) => void} [select]  Called with a button's index when the pointer moves onto it.
+ */
+export function highlightMenuButtons(buttons, index, select) {
+    const { activeColor, idleColor, idleAlpha } = ButtonTheme.menu;
+    buttons.forEach((b, i) => {
+        if (!b?.scene) return; // destroyed
+        if (select && !b._menuSelectBound) {
+            b._menuSelectBound = true;
+            b.on('pointerover', () => select(i));
+        }
+        const active = i === index;
+        b.scene.tweens.killTweensOf(b);
+        b.scale = b._normalScale ?? 1;
+        b.setAlpha(active ? 1 : idleAlpha);
+        const c = (active ? activeColor : idleColor) ?? b._normalColor;
+        b._baseColor = c;
+        b.textObject?.setColor(c);
+    });
 }

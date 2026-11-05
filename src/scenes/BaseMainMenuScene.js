@@ -4,7 +4,7 @@
 
 import * as Phaser from 'phaser';
 import ModalBase     from '../systems/scene/ModalBase.js';
-import { createMenuButton } from '../ui/ui.js';
+import { createMenuButton, highlightMenuButtons } from '../ui/ui.js';
 import { InputController }  from '../systems/InputController.js';
 import { SoundManager }     from '../systems/SoundManager.js';
 
@@ -184,6 +184,7 @@ export default class BaseMainMenuScene extends Phaser.Scene {
      * @param {number} idx  Zero-based index of the button to highlight.
      */
     _highlightButton(idx) {
+        highlightMenuButtons(this.buttons, idx, i => { this.selectedIndex = i; this._highlightButton(i); });
     }
 
     // -------------------------------------------------------------------------

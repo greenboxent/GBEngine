@@ -4,7 +4,7 @@
 
 import * as Phaser from 'phaser';
 import ModalBase     from '../systems/scene/ModalBase.js';
-import { createMenuButton, createText } from '../ui/ui.js';
+import { createMenuButton, createText, highlightMenuButtons } from '../ui/ui.js';
 import { InputController } from '../systems/InputController.js';
 
 /**
@@ -152,5 +152,7 @@ export default class BaseLevelCompleteScene extends Phaser.Scene {
     /** @private Activates the currently highlighted button. */
     _selectCurrent()      { this.buttons[this.selectedIndex]?.emit('pointerdown'); }
     /** @private Highlights button at `idx`, dims all others. @param {number} idx  Zero-based button index. */
-    _highlightButton(idx) { this.buttons.forEach((b, i) => b.setAlpha(i === idx ? 1 : 0.6)); }
+    _highlightButton(idx) {
+        highlightMenuButtons(this.buttons, idx, i => { this.selectedIndex = i; this._highlightButton(i); });
+    }
 }

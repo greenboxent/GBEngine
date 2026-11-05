@@ -17,6 +17,11 @@
  * @property {number} borderColor - Stroke / glow colour.
  * @property {boolean} borderGlow - Whether to render the animated glow layers.
  * @property {number} padding - Horizontal padding (pixels) added to each side of the label.
+ * @property {{activeColor:?string, idleColor:?string, idleAlpha:number}} menu - Menu-list
+ *   selection look used by `highlightMenuButtons()` (Main Menu, Pause, Game Over, Level
+ *   Complete): the selected button vs. the dimmed rest. A null colour means the
+ *   button's own normal colour. Games can restyle it at boot, e.g.
+ *   `Object.assign(ButtonTheme.menu, { idleColor: '#00ffcc' })`.
  */
 export const ButtonTheme = {
     // Text colors
@@ -47,5 +52,12 @@ export const ButtonTheme = {
     backgroundAlpha: 0.7,
     borderColor: 0x4488ff,
     borderGlow: true,
-    padding: 20
+    padding: 20,
+
+    // Menu-list selection (see highlightMenuButtons in uiButton.js)
+    menu: {
+        activeColor: null,      // null = button's normal colour
+        idleColor: null,        // null = button's normal colour
+        idleAlpha: 0.6
+    }
 };
