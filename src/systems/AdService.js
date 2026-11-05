@@ -21,6 +21,11 @@ const AD_UNITS = {
     // rewarded:     'ca-app-pub-4949919190549446/2567211360',
 };
 
+// UMP consent state. Module-level so it needs no constructor fields.
+let consentDebug = {};
+let privacyOptionsRequired = false;
+const CONSENT_INFO_TIMEOUT_MS = 10000;
+
 // ---------------------------------------------------------------------------
 // AdService singleton
 // ---------------------------------------------------------------------------
@@ -81,11 +86,15 @@ class AdServiceClass {
      * @param {string} [ids.interstitial] - Interstitial ad unit ID.
      * @param {string} [ids.rewarded] - Rewarded ad unit ID.
      * @param {boolean} [ids.childDirected] - Tag ads as child-directed (COPPA).
+     * @param {object} [ids.consentDebug] - Test-only UMP overrides, passed to
+     *   `AdMob.requestConsentInfo` (`debugGeography`, `testDeviceIdentifiers`).
+     *   Use `debugGeography: 1` (EEA) with a test device ID to force the form.
      */
     configure(ids = {}) {
         if (ids.interstitial)              AD_UNITS.interstitial = ids.interstitial;
         if (ids.rewarded)                  AD_UNITS.rewarded     = ids.rewarded;
         if (ids.childDirected !== undefined) this._childDirected = ids.childDirected;
+        if (ids.consentDebug)              consentDebug          = ids.consentDebug;
     }
 
     // -------------------------------------------------------------------------
@@ -93,14 +102,75 @@ class AdServiceClass {
     // -------------------------------------------------------------------------
 
     /**
-     * Initialize the AdMob SDK and preload both ad types.
+     * Gather EEA/UK/Swiss consent through Google's User Messaging Platform
+     * (UMP), showing the GDPR message configured in AdMob when one is needed.
+     * Runs before the ad SDK starts, as Google requires.
+     *
+     * Never throws: if the consent request fails (e.g. offline) the SDK falls
+     * back to the consent state UMP cached from a previous launch.
+     *
+     * @private
+     * @returns {Promise<boolean>} false only when UMP says ads must not be requested
+     */
+    async _gatherConsent() {
+        try {
+            const timeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('requestConsentInfo timeout')), CONSENT_INFO_TIMEOUT_MS));
+            let info = await Promise.race([
+                AdMob.requestConsentInfo({ ...consentDebug, tagForUnderAgeOfConsent: this._childDirected }),
+                timeout,
+            ]);
+            // No timeout on the form: it waits for the player to answer.
+            if (info.status === 'REQUIRED' && info.isConsentFormAvailable) {
+                info = await AdMob.showConsentForm();
+            }
+            privacyOptionsRequired = info.privacyOptionsRequirementStatus === 'REQUIRED';
+            return info.canRequestAds !== false;
+        } catch (e) {
+            console.warn('[AdService] consent request failed:', e?.message ?? e);
+            return true;
+        }
+    }
+
+    /**
+     * Whether the player must be offered a way to change their consent
+     * (EEA/UK/Switzerland). Show a "Privacy options" button only when true.
+     * Valid after `initialize()` has run.
+     *
+     * @returns {boolean}
+     */
+    get privacyOptionsRequired() {
+        return privacyOptionsRequired;
+    }
+
+    /**
+     * Re-open the UMP privacy options form so the player can change or
+     * withdraw consent. Silent no-op on web or when the form is unavailable.
+     *
+     * @returns {Promise<void>}
+     */
+    async showPrivacyOptions() {
+        if (!this.isNative) return;
+        try {
+            await AdMob.showPrivacyOptionsForm();
+        } catch (e) {
+            console.warn('[AdService] showPrivacyOptionsForm failed:', e?.message ?? e);
+        }
+    }
+
+    /**
+     * Gather consent, initialize the AdMob SDK and preload both ad types.
      * Call once during BootScene (or before any ad is needed).
      * Safe to call on non-Android — will silently no-op.
      *
      * @returns {Promise<void>}
      */
     async initialize() {
-        if (this._initialized) return;
+        if (this._initialized || !this.isNative) return;
+        if (!await this._gatherConsent()) {
+            console.warn('[AdService] consent not granted; ads not initialized');
+            return;
+        }
         try {
             const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('AdMob init timeout')), 5000));
             await Promise.race([AdMob.initialize(), timeout]);
