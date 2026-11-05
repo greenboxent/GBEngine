@@ -125,6 +125,58 @@ Names are unique per Firebase project. Name+PIN accounts are unique through Fire
 }
 ```
 
+## Account deletion
+
+Google Play requires apps with accounts to offer deletion **in the app and at a web URL**. The engine provides both; a game only says where its data lives:
+
+```js
+// src/config/accountData.js — shared by the in-game button and the web page
+export const ACCOUNT_DATA = {
+    perUserPaths: ['my-game-settings', 'games/my-game/personalScores'], // <path>/<uid> is removed
+    leaderboards: ['my-game-leaderboard'],                              // entries whose playerId == uid are removed
+    // ownerField: 'playerId', nameIndex: 'playerNames'                 // defaults
+};
+```
+
+**In the game** — add a button (signed-in players only) in Settings:
+
+```js
+import { showDeleteAccountDialog } from '@gamebase/gbengine';
+createMenuButton(this, x, y, 'Delete Account', () => showDeleteAccountDialog(this, ACCOUNT_DATA));
+```
+
+It re-authenticates (PIN or Google), deletes the data, then the Firebase Auth account, clears local storage and reloads the game.
+
+**On the web** — a second Vite entry served at `/delete-account` (add a Firebase Hosting rewrite for it before the catch-all). Use this URL in Play Console → App content → Data safety → Delete account URL:
+
+```html
+<!-- delete-account.html -->
+<!doctype html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+<body><script type="module" src="/src/web/deleteAccountPage.js"></script></body></html>
+```
+```js
+// src/web/deleteAccountPage.js
+import { mountDeleteAccountPage } from '@gamebase/gbengine/delete-account-page'; // not the main barrel: no Phaser
+import { firebaseConfig } from '../config/firebaseConfig.js';
+import { ACCOUNT_DATA } from '../config/accountData.js';
+mountDeleteAccountPage({ firebaseConfig, appName: 'My Game', data: ACCOUNT_DATA });
+```
+```js
+// vite.config.js → build.rollupOptions
+input: { main: 'index.html', deleteAccount: 'delete-account.html' },
+```
+
+**Database rules** — players must be able to delete their own records, and the two lookups need indexes:
+
+```json
+"playerNames": { ".indexOn": ".value", ... },                       // find this uid's names
+"my-game-leaderboard": {
+  ".indexOn": ["score", "playerId"],                                 // find this uid's entries
+  "$entryId": { ".write": "auth != null && ((!data.exists() && newData.exists()) || (data.exists() && !newData.exists() && data.child('playerId').val() === auth.uid))" }
+}
+```
+(The per-user paths — settings, personal scores — are normally already `auth.uid == $uid` read/write.)
+
 ## Publishing a new version
 
 ```bash

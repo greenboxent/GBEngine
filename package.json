@@ -1,11 +1,12 @@
 {
     "name": "@gamebase/gbengine",
-    "version": "1.0.11",
+    "version": "1.1.0",
     "description": "Shared Phaser 4 game framework for Greenbox Entertainment games",
     "type": "module",
     "main": "src/index.js",
     "exports": {
-        ".": "./src/index.js"
+        ".": "./src/index.js",
+        "./delete-account-page": "./src/web/DeleteAccountPage.js"
     },
     "publishConfig": {
         "registry": "https://npm.pkg.github.com"

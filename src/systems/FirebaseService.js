@@ -5,20 +5,10 @@
  */
 
 import { Debug } from '../engine/Debug.js';
+import { NAME_AUTH_DOMAIN, sanitizeNameKey } from './nameKey.js';
 
-/** Synthetic email domain used to turn a player name + PIN into a real Firebase Auth credential. */
-const NAME_AUTH_DOMAIN = 'players.gbent';
-
-/**
- * Normalise a player name to a Firebase-safe key (also used as the local
- * part of the synthetic name+PIN auth email — see {@link FirebaseService#signInWithNamePin}).
- * Lowercases, replaces dots with `_dot_`, and strips `# $ [ ] /`.
- * @param {string} name  Raw player name to sanitise.
- * @returns {string}
- */
-export function sanitizeNameKey(name) {
-    return name.toLowerCase().replace(/\./g, '_dot_').replace(/[#$[\]/]/g, '_');
-}
+// Defined in nameKey.js (dependency-free, shared with the delete-account page).
+export { sanitizeNameKey };
 
 /**
  * Unified Firebase initialisation and authentication service.

@@ -15,6 +15,8 @@ export { PersonalScores }    from './systems/PersonalScores.js';
 export { ScoreManager }      from './systems/ScoreManager.js';
 export { BaseSettingsManager } from './systems/BaseSettingsManager.js';
 export { Settings, registerSettings } from './systems/SettingsManager.js';
+export * from './systems/AccountDeletion.js';       // deleteAccount, authProviderId, reauth helpers, AccountDataConfig
+export { showDeleteAccountDialog } from './ui/DeleteAccountDialog.js';
 
 // ─── Systems — verbatim ──────────────────────────────────────────────────────
 export { AdService }         from './systems/AdService.js';
