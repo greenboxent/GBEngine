@@ -99,6 +99,9 @@ export class InputController {
         this.prevAPressed = false;
         this.prevDpadLeft = false;
         this.prevDpadRight = false;
+        this.prevKbUp = false;
+        this.prevKbDown = false;
+        this.prevKbSelect = false;
 
         // Debug: track RT trigger
         this.debugRTCount = 0;
@@ -194,6 +197,15 @@ export class InputController {
             weaponPrev: this._resolveKey('weaponPrev'),
             weaponNext: this._resolveKey('weaponNext')
         };
+
+        // Fixed (non-rebindable) keys for menu navigation: arrows + Enter.
+        const KC = Phaser.Input.Keyboard.KeyCodes;
+        const kb = this.scene.input.keyboard;
+        this.menuKeys = {
+            up:     kb.addKey(KC.UP),
+            down:   kb.addKey(KC.DOWN),
+            select: kb.addKey(KC.ENTER)
+        };
     }
 
     /**
@@ -262,6 +274,17 @@ export class InputController {
         // Menu back with ESC key
         const escKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
         this.menuBack = Phaser.Input.Keyboard.JustDown(escKey);
+
+        // Menu navigation from the keyboard (arrows + Enter), edge-triggered like the
+        // gamepad below. Uses isDown + our own previous state rather than JustDown so
+        // scenes that read the same Key objects themselves (cursor keys) are unaffected.
+        const mk = this.menuKeys;
+        if (mk.up.isDown     && !this.prevKbUp)     this.menuUp     = true;
+        if (mk.down.isDown   && !this.prevKbDown)   this.menuDown   = true;
+        if (mk.select.isDown && !this.prevKbSelect) this.menuSelect = true;
+        this.prevKbUp     = mk.up.isDown;
+        this.prevKbDown   = mk.down.isDown;
+        this.prevKbSelect = mk.select.isDown;
 
         // Weapon switching (edge-triggered)
         this.weaponPrev = Phaser.Input.Keyboard.JustDown(k.weaponPrev);
