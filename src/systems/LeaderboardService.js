@@ -78,7 +78,8 @@ export class LeaderboardService {
     // -------------------------------------------------------------------------
 
     /**
-     * Submit a score.  Player name is read from localStorage key 'playerName'.
+     * Submit a score.  Player name is read from localStorage key 'playerName'
+     * (Google players get one claimed at sign-in — see `ensureGooglePlayerName`).
      * Returns false (silently) when no name is set.
      *
      * @param {number} score  Score value to submit.
@@ -89,13 +90,9 @@ export class LeaderboardService {
      * @returns {Promise<boolean>}
      */
     async submitScore(score, level = 1, difficulty = 'medium', timeElapsed = 0, errors = 0, extra = {}) {
-        let playerName = localStorage.getItem('playerName') || '';
-        if (!playerName || playerName.toLowerCase() === 'anonymous') {
-            if (this._fb.getAuthProvider() === 'google') {
-                const u = this._fb.getUser();
-                playerName = u ? (u.displayName || (u.email || '').split('@')[0]) : '';
-            }
-        }
+        // No fallback to the Google profile name: it is not unique, so it must
+        // go through the claim at sign-in before it can appear on a leaderboard.
+        const playerName = localStorage.getItem('playerName') || '';
         if (!playerName || playerName.toLowerCase() === 'anonymous') {
             Debug.log('LeaderboardService', 'Score not submitted: no player name set');
             return false;

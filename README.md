@@ -116,7 +116,7 @@ export default class BootScene extends BaseBootScene {
 
 ## Player names (`playerNames` index)
 
-Names are unique per Firebase project. Name+PIN accounts are unique through Firebase Auth (`<name>@players.gbent`); Google players' display names and name+PIN names share the `playerNames/<sanitised name>` → uid index, which `FirebaseService.signInWithNamePin()` and the Settings name dialog check and write. Each game's database rules must include it, or the checks silently fail open:
+Names are unique per Firebase project. Name+PIN accounts are unique through Firebase Auth (`<name>@players.gbent`); Google players' display names and name+PIN names share the `playerNames/<sanitised name>` → uid index, which `FirebaseService.signInWithNamePin()` and the Settings name dialog check and write. `BaseLoginScene` claims a Google player's name right after sign-in (`ensureGooglePlayerName` in `ui/PlayerNameDialog.js`): the saved name, else one derived from their Google profile; if it is taken or invalid the player is asked for another. `LeaderboardService.submitScore()` only uses the saved `playerName` — it never falls back to the raw Google display name. Each game's database rules must include it, or the checks silently fail open:
 
 ```json
 "playerNames": {

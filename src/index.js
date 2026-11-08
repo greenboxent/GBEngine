@@ -17,6 +17,7 @@ export { BaseSettingsManager } from './systems/BaseSettingsManager.js';
 export { Settings, registerSettings } from './systems/SettingsManager.js';
 export * from './systems/AccountDeletion.js';       // deleteAccount, authProviderId, reauth helpers, AccountDataConfig
 export { showDeleteAccountDialog } from './ui/DeleteAccountDialog.js';
+export { ensureGooglePlayerName, showGooglePlayerNameDialog, validatePlayerName, suggestGoogleName } from './ui/PlayerNameDialog.js';
 
 // ─── Systems — verbatim ──────────────────────────────────────────────────────
 export { AdService }         from './systems/AdService.js';

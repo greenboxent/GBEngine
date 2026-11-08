@@ -6,6 +6,7 @@ import * as Phaser from 'phaser';
 import ModalBase     from '../systems/scene/ModalBase.js';
 import { createMenuButton, createText } from '../ui/ui.js';
 import { InputController } from '../systems/InputController.js';
+import { ensureGooglePlayerName } from '../ui/PlayerNameDialog.js';
 
 /**
  * Firebase authentication screen.
@@ -98,6 +99,7 @@ export default class BaseLoginScene extends Phaser.Scene {
                 const result = await this._fb?.signInWithGoogle();
                 if (result?.success) {
                     this.statusText?.setText('Loading your data...');
+                    await ensureGooglePlayerName(this, result.user);
                     await this._onLoginComplete(result.user);
                 } else {
                     const msg = result?.error || 'Sign-in failed';
