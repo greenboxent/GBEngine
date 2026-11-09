@@ -7,16 +7,19 @@ import ModalBase     from '../systems/scene/ModalBase.js';
 import { createMenuButton, createText } from '../ui/ui.js';
 import { InputController } from '../systems/InputController.js';
 import { ensureGooglePlayerName } from '../ui/PlayerNameDialog.js';
+import { Settings } from '../systems/SettingsManager.js';
 
 /**
  * Firebase authentication screen.
  *
- * Presents Sign in with Google, Play as Guest (anonymous sign-in), and
- * optionally a link-account flow for returning anonymous users.
+ * Presents Sign in with Google and Play as Guest. A guest is an anonymous
+ * Firebase account by default; a game can override `_guestUsesAccount()` to
+ * keep guests fully local until they claim a name (see below).
  * Calls `_onLoginComplete(user)` after a successful sign-in.
  *
  * Override hooks:
- * - `_onLoginComplete(user)` — navigate forward after sign-in
+ * - `_onLoginComplete(user)` — navigate forward after sign-in (`null` for a local guest)
+ * - `_guestUsesAccount()` — whether Play as Guest creates an anonymous account (default `true`)
  * - `_getTitle()` — heading string (default: `'Sign In'`)
  * - `_getPrivacyUrl()` / `_getTermsUrl()` — legal link URLs
  * - `_getModalConfig(width, height)` — panel size/style
@@ -112,10 +115,14 @@ export default class BaseLoginScene extends Phaser.Scene {
         }, { fontSize: btnFs, padding: 10 });
         y += btnGap;
 
-        // Guest — instant anonymous sign-in, no prompt. Players who want their
-        // data to persist across devices/reinstalls claim a name+PIN identity
-        // later, from Settings > Player Name (see BaseSettingsScene._showNameInput).
+        // Guest — no prompt. Players who want their data to persist across
+        // devices/reinstalls claim a name+PIN identity later, from Settings >
+        // Player Name (see BaseSettingsScene._showNameInput).
         createMenuButton(this, cx, y, 'Play as Guest', async () => {
+            if (!this._guestUsesAccount()) {
+                await this._playAsLocalGuest();
+                return;
+            }
             this.statusText?.setText('Signing in as guest...');
             try {
                 const result = await this._fb?.signInAnonymously();
@@ -160,6 +167,32 @@ export default class BaseLoginScene extends Phaser.Scene {
 
     /** Title text shown at the top of the login panel. */
     _getTitle() { return 'Sign In'; }
+
+    /**
+     * Whether "Play as Guest" creates an anonymous Firebase account. Default
+     * `true`. Return `false` for a guest that exists only on the device —
+     * no account, no cloud data — until the player claims a name+PIN or signs
+     * in with Google. The game then runs signed out (`firebaseService.isReady()`
+     * is false), so it must keep settings/progress in localStorage meanwhile.
+     * @returns {boolean}
+     */
+    _guestUsesAccount() { return true; }
+
+    /**
+     * Guest without an account: signs out of any restored session (so the
+     * guest can't end up playing as, or saving into, a previous account) and
+     * drops a player name left on the device by an earlier identity — a guest
+     * has no name. Nothing is created in Firebase.
+     * @private
+     */
+    async _playAsLocalGuest() {
+        try {
+            if (this._fb?.getUser()) await this._fb.signOut();
+            localStorage.removeItem('playerName');
+            Settings.playerName = ''; // signed out now, so this only saves locally
+        } catch { /* proceed as a guest regardless */ }
+        await this._onLoginComplete(null);
+    }
 
     /** Privacy Policy URL. */
     _getPrivacyUrl() { return 'https://www.greenboxgames.com/privacy-policy'; }

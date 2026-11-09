@@ -247,7 +247,9 @@ class FirebaseService {
      * there is never registered as a second, separate name+PIN account. The
      * game's database rules must allow it (see GBEngine README / Balloonatics
      * database.rules.json): read for any signed-in user, write only to an
-     * unclaimed key or one the writer already owns.
+     * unclaimed key or one the writer already owns. Works when signed out (a
+     * local guest): the account is created first and discarded again if the
+     * name turns out to be taken.
      *
      * @param {string} name  Player-chosen display name.
      * @param {string} pin   Player-chosen PIN (Firebase requires 6+ characters).
@@ -266,7 +268,13 @@ class FirebaseService {
                 try {
                     const uc = await createUserWithEmailAndPassword(this.auth, email, pin);
                     this.user = uc.user;
-                    await this._claimName(key);
+                    // The index can't be read before signing in (a guest has no account),
+                    // so ownership is only known now: if the name is someone else's — e.g.
+                    // a Google player's display name — drop the account just created.
+                    if (!(await this._claimName(key))) {
+                        await this._discardNewUser(uc.user);
+                        return { success: false, error: 'That name is already taken. Please choose another.' };
+                    }
                     Debug.log('FirebaseService', `Name+PIN registered: ${this.user.uid}`);
                     return { success: true, isNew: true, user: this.user };
                 } catch (createErr) {
@@ -323,15 +331,35 @@ class FirebaseService {
      * Records the signed-in user as the owner of `playerNames/<key>`.
      * @private
      * @param {string} key  Sanitised name key.
+     * @returns {Promise<boolean>} False only if the name belongs to another player
+     *   (the database rules refused the write); true on success or any other failure.
      */
     async _claimName(key) {
-        if (!this.firebaseDB || !this.firebaseFunctions || !this.user) return;
+        if (!this.firebaseDB || !this.firebaseFunctions || !this.user) return true;
         try {
             const { ref, set } = this.firebaseFunctions;
             await set(ref(this.firebaseDB, `playerNames/${key}`), this.user.uid);
+            return true;
         } catch (error) {
             Debug.warn('FirebaseService', 'playerNames claim failed:', error?.message);
+            return !/permission[_ ]denied/i.test(error?.code ?? error?.message ?? '');
         }
+    }
+
+    /**
+     * Deletes an account that was just registered and signs out, so a refused
+     * name+PIN registration leaves nothing behind.
+     * @private
+     * @param {object} user  The newly created Firebase user.
+     */
+    async _discardNewUser(user) {
+        try {
+            const { deleteUser, signOut } = await import('firebase/auth');
+            try { await deleteUser(user); } catch { await signOut(this.auth); }
+        } catch (error) {
+            Debug.warn('FirebaseService', 'Could not discard new account:', error?.message);
+        }
+        this.user = null;
     }
 
     async linkAnonymousToGoogle() {

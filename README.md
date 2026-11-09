@@ -114,6 +114,10 @@ export default class BootScene extends BaseBootScene {
 }
 ```
 
+## Guests
+
+`BaseLoginScene`'s "Play as Guest" creates an anonymous Firebase account by default. A game that wants guests to leave nothing in the database overrides `_guestUsesAccount() { return false; }`: the guest signs out of any restored session, loses any leftover local `playerName`, and plays signed out (`firebaseService.isReady()` is false, so settings/progress must fall back to localStorage). `_onLoginComplete(null)` is called. An account is only created when the player claims a name+PIN (`FirebaseService.signInWithNamePin()`, which works signed out: it registers, then deletes the account again if the name is already taken) or signs in with Google.
+
 ## Player names (`playerNames` index)
 
 Names are unique per Firebase project. Name+PIN accounts are unique through Firebase Auth (`<name>@players.gbent`); Google players' display names and name+PIN names share the `playerNames/<sanitised name>` → uid index, which `FirebaseService.signInWithNamePin()` and the Settings name dialog check and write. `BaseLoginScene` claims a Google player's name right after sign-in (`ensureGooglePlayerName` in `ui/PlayerNameDialog.js`): the saved name, else one derived from their Google profile; if it is taken or invalid the player is asked for another. `LeaderboardService.submitScore()` only uses the saved `playerName` — it never falls back to the raw Google display name. Each game's database rules must include it, or the checks silently fail open:
