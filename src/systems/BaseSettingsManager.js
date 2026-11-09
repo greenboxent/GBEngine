@@ -114,6 +114,27 @@ export class BaseSettingsManager {
     }
 
     /**
+     * The player name saved for the signed-in account in Firebase, or '' if
+     * none (or Firebase is unavailable). Unlike `playerName`, this never comes
+     * from localStorage, which may hold a name from an identity used earlier
+     * on this device.
+     *
+     * @returns {Promise<string>}
+     */
+    async fetchCloudPlayerName() {
+        if (!this._fb?.isReady()) return '';
+        try {
+            const { ref, get } = this._fb.getFunctions();
+            const uid  = this._fb.getPlayerId();
+            const snap = await get(ref(this._fb.getDatabase(), `${this._firebaseRoot}/${uid}/playerName`));
+            return snap.exists() && typeof snap.val() === 'string' ? snap.val() : '';
+        } catch (error) {
+            Debug.warn('Settings', 'Cloud player name fetch failed:', error?.message);
+            return '';
+        }
+    }
+
+    /**
      * Persist settings to localStorage immediately; sync to Firebase in background.
      */
     save() {

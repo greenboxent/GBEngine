@@ -64,8 +64,9 @@ function commitPlayerName(name) {
  * Makes sure a Google-signed-in player has a validated, claimed player name.
  * Call after a successful Google sign-in.
  *
- * Uses the name already saved for the account, else one suggested from their
- * Google profile. If that is free (or already theirs) it is claimed silently;
+ * Uses the name saved on the account in the cloud, else one derived from their
+ * Google profile — never a name left in local storage by an earlier identity
+ * on this device. If that is free (or already theirs) it is claimed silently;
  * if it is invalid or taken, the name dialog opens. Skipping the dialog leaves
  * the player without a name (no leaderboard scores until they set one in Settings).
  *
@@ -74,12 +75,15 @@ function commitPlayerName(name) {
  * @returns {Promise<string>} The claimed name, or '' if the player skipped.
  */
 export async function ensureGooglePlayerName(scene, user) {
+    // The name saved on THIS account in the cloud — not the local copy, which
+    // may belong to an identity used earlier on this device (guest, name+PIN
+    // or another Google account) and must not carry over.
+    const cloudName = ((await Settings.fetchCloudPlayerName?.()) || '').trim();
     try {
-        await Settings.load?.(); // restore the name saved on this account (cloud)
+        await Settings.load?.(); // restore this account's saved settings
     } catch { /* settings fall back to what is already loaded */ }
 
-    const saved     = (Settings.playerName || localStorage.getItem('playerName') || '').trim();
-    const candidate = saved || suggestGoogleName(user);
+    const candidate = cloudName || suggestGoogleName(user);
 
     let notice = '';
     if (candidate) {
@@ -93,7 +97,13 @@ export async function ensureGooglePlayerName(scene, user) {
             notice = `"${candidate}" is already taken. Please choose another name.`;
         }
     }
-    return showGooglePlayerNameDialog(scene, { initialName: candidate, notice });
+    const chosen = await showGooglePlayerNameDialog(scene, { initialName: candidate, notice });
+    if (!chosen) {
+        // Skipped: drop any stale local name so scores are not posted under it.
+        localStorage.setItem('playerName', '');
+        Settings.playerName = '';
+    }
+    return chosen;
 }
 
 /**
