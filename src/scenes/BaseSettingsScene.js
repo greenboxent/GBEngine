@@ -624,6 +624,7 @@ export default class BaseSettingsScene extends Phaser.Scene {
      * Subclasses can override these hooks:
      *   _checkPlayerNameAvailable(name)  → Promise<boolean>  (default: always true; Google path only)
      *   _claimPlayerName(name, oldName)  → void              (default: no-op)
+     *   _onAccountChanged(isNew)         → Promise<void>     (after a name+PIN sign-in; default: no-op)
      *
      * @param {Phaser.GameObjects.Text} displayText - Phaser text object showing current name (unused by base, kept for compat).
      * @param {string} [googleDerivedName=''] - Default name suggested from Google account.
@@ -787,6 +788,7 @@ export default class BaseSettingsScene extends Phaser.Scene {
                 }
                 // Re-key live settings/scores to the new identity before saving the name.
                 await Settings.load();
+                await this._onAccountChanged(result.isNew);
             }
 
             const oldName = localStorage.getItem('playerName') || '';
@@ -819,6 +821,14 @@ export default class BaseSettingsScene extends Phaser.Scene {
         document.body.appendChild(overlay);
         setTimeout(() => input.focus(), 50);
     }
+
+    /**
+     * Called after a name+PIN sign-in switched this device to another account,
+     * once settings are re-keyed to it. Override to re-key game data (progress, …).
+     * @param {boolean} _isNew  True if the account was just registered.
+     * @returns {Promise<void>}
+     */
+    async _onAccountChanged(_isNew) {}
 
     /**
      * Whether a player name is free in the shared `playerNames` index (or
