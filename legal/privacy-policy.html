@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="index, follow">
+  <title>Green Box Entertainment, LLC - Privacy Policy</title>
+  <style>
+    /* Reset and Base Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #374151;
+      background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 50%, #f8fafc 100%);
+      min-height: 100vh;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Header Styles */
+    header {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .header-container {
+      max-width: 64rem;
+      margin: 0 auto;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .company-info {
+      flex: 1;
+    }
+
+    .company-name {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.375rem;
+    }
+
+    .document-type {
+      font-size: 1rem;
+      color: #4b5563;
+      font-weight: 500;
+    }
+
+    .powered-by {
+      text-align: right;
+    }
+
+    .powered-by-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 0.25rem;
+    }
+
+    .termsbox-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+
+    .termsbox-badge:hover {
+      background: #dbeafe;
+    }
+
+    /* Main Content Container */
+    main {
+      max-width: 64rem;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+    }
+
+    article {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+    }
+
+    /* Last Updated Badge */
+    .badge-container {
+      padding: 2rem 2.5rem 1.5rem;
+      background: linear-gradient(to right, #eff6ff, #eef2ff);
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .last-updated-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.5rem 1rem;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(4px);
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      border: 1px solid #e5e7eb;
+    }
+
+    .clock-icon {
+      width: 1rem;
+      height: 1rem;
+      color: #2563eb;
+      flex-shrink: 0;
+    }
+
+    .date-strong {
+      font-weight: 600;
+      color: #111827;
+    }
+
+    /* Document Content - Prose Styles */
+    .content {
+      padding: 2.5rem;
+      font-size: 1.125rem;
+      line-height: 1.75;
+      max-width: none;
+    }
+
+    /* Headings */
+    .content h1,
+    .content h2,
+    .content h3,
+    .content h4 {
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: -0.025em;
+      scroll-margin-top: 5rem;
+    }
+
+    .content h1 {
+      font-size: 3rem;
+      margin-bottom: 2rem;
+      margin-top: 0;
+      padding-bottom: 1.5rem;
+      border-bottom: 2px solid #d1d5db;
+    }
+
+    .content h2 {
+      font-size: 1.875rem;
+      margin-top: 3.5rem;
+      margin-bottom: 1.5rem;
+      padding-top: 0;
+      color: #1e3a8a;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 0.75rem;
+    }
+
+    .content h3 {
+      font-size: 1.5rem;
+      margin-top: 2.5rem;
+      margin-bottom: 1.25rem;
+      color: #1f2937;
+      font-weight: 700;
+    }
+
+    .content h4 {
+      font-size: 1.25rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      color: #1f2937;
+      font-weight: 700;
+    }
+
+    /* Paragraphs */
+    .content p {
+      color: #374151;
+      line-height: 1.75;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Links */
+    .content a {
+      color: #2563eb;
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 0.2s, text-decoration 0.2s;
+    }
+
+    .content a:hover {
+      color: #1d4ed8;
+      text-decoration: underline;
+    }
+
+    /* Lists */
+    .content ul,
+    .content ol {
+      margin-top: 1.75rem;
+      margin-bottom: 1.75rem;
+      padding-left: 1.75rem;
+    }
+
+    .content ul {
+      list-style-type: disc;
+    }
+
+    .content ol {
+      list-style-type: decimal;
+    }
+
+    .content li {
+      color: #374151;
+      line-height: 1.75;
+      margin-top: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .content li::marker {
+      color: #2563eb;
+      font-weight: 700;
+    }
+
+    .content ul ul,
+    .content ul ol,
+    .content ol ul,
+    .content ol ol {
+      margin-top: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Strong/Bold */
+    .content strong {
+      color: #111827;
+      font-weight: 700;
+    }
+
+    /* Blockquotes */
+    .content blockquote {
+      border-left: 4px solid #3b82f6;
+      padding-left: 1rem;
+      font-style: italic;
+      color: #4b5563;
+      margin: 1.75rem 0;
+    }
+
+    /* Code */
+    .content code {
+      color: #2563eb;
+      background: #eff6ff;
+      padding: 0.125rem 0.375rem;
+      border-radius: 0.25rem;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.875rem;
+    }
+
+    .content pre {
+      background: #111827;
+      color: #f3f4f6;
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      padding: 1rem;
+      overflow-x: auto;
+      margin: 1.75rem 0;
+    }
+
+    .content pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    /* Tables */
+    .content table {
+      margin-top: 2.5rem;
+      margin-bottom: 2.5rem;
+      width: 100%;
+      border-collapse: collapse;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      border: 2px solid #d1d5db;
+    }
+
+    .content thead {
+      background: linear-gradient(to right, #dbeafe, #e0e7ff, #dbeafe);
+    }
+
+    .content th {
+      padding: 1rem 1.25rem;
+      text-align: left;
+      font-weight: 800;
+      color: #111827;
+      border: 2px solid #d1d5db;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .content td {
+      padding: 1rem 1.25rem;
+      border: 1px solid #d1d5db;
+      color: #374151;
+      vertical-align: top;
+    }
+
+    .content tbody {
+      background: white;
+    }
+
+    .content tr:hover {
+      background: rgba(239, 246, 255, 0.3);
+      transition: background-color 0.15s;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(229, 231, 235, 0.6);
+      text-align: center;
+    }
+
+    .footer-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #2563eb;
+    }
+
+    .footer-text {
+      font-size: 0.875rem;
+      color: #4b5563;
+      margin-bottom: 0.5rem;
+    }
+
+    .footer-link {
+      color: #2563eb;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s, text-decoration 0.2s;
+    }
+
+    .footer-link:hover {
+      color: #1d4ed8;
+      text-decoration: underline;
+    }
+
+    .footer-meta {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: white !important;
+      }
+
+      header {
+        position: static !important;
+        background: white !important;
+      }
+
+      .content {
+        font-size: 11pt !important;
+      }
+
+      .content h1 {
+        font-size: 18pt;
+      }
+
+      .content h2 {
+        font-size: 16pt;
+      }
+
+      .content h3 {
+        font-size: 14pt;
+      }
+
+      .content h4 {
+        font-size: 12pt;
+      }
+
+      footer {
+        page-break-before: always;
+      }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 640px) {
+      .company-name {
+        font-size: 1.5rem;
+      }
+
+      .document-type {
+        font-size: 0.875rem;
+      }
+
+      .header-container {
+        padding: 1rem 1rem;
+      }
+
+      main {
+        padding: 1rem 1rem 2rem;
+      }
+
+      .content {
+        padding: 1.5rem;
+        font-size: 1rem;
+      }
+
+      .badge-container {
+        padding: 1.5rem 1.5rem 1rem;
+      }
+
+      .content h1 {
+        font-size: 2rem;
+      }
+
+      .content h2 {
+        font-size: 1.5rem;
+      }
+
+      .content h3 {
+        font-size: 1.25rem;
+      }
+
+      .content h4 {
+        font-size: 1.125rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-container">
+      <div class="company-info">
+        <h1 class="company-name">Green Box Entertainment, LLC</h1>
+        <p class="document-type">Privacy Policy</p>
+      </div>
+      <div class="powered-by">
+        <p class="powered-by-label">Powered by</p>
+        <a href="https://termsbox.com" class="termsbox-badge" target="_blank" rel="noopener noreferrer">
+          <span>TermsBox</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <article>
+      <!-- Last Updated Badge -->
+      <div class="badge-container">
+        <div class="last-updated-badge">
+          <svg class="clock-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>Last updated: <span class="date-strong">November 10, 2026</span></span>
+        </div>
+      </div>
+
+      <!-- Document Content -->
+      <div class="content">
+        
+<h1>PRIVACY POLICY</h1>
+
+<h2>INTRODUCTION</h2>
+<p>Green Box Entertainment, LLC ("we", "us", or "our") operates the Green Box Games website and various mobile applications (the "Service").</p>
+
+<p>This page explains how we collect, use, disclose, and protect personal data when you use our Service, and the choices you have regarding that data.</p>
+<p>Use of the Service is subject to this Privacy Policy.</p>
+
+<h2>WHO WE ARE</h2>
+<ul>
+<li><strong>Controller:</strong> Green Box Entertainment, LLC</li>
+<li><strong>Registered address:</strong> 3023 Smokey Hollow Drive, Houston, TX 77068</li>
+<li><strong>Privacy contact:</strong> <a href="mailto:support@greenboxent.com">support@greenboxent.com</a></li>
+</ul>
+
+<h2>INFORMATION COLLECTION AND USE</h2>
+<h4>PURPOSES & LEGAL BASES (EU/UK)</h4>
+
+<table border="1" cellpadding="8" cellspacing="0" style="width:100%; border-collapse:collapse;">
+<thead>
+<tr>
+<th>Purpose</th>
+<th>Examples</th>
+<th>Legal basis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Provide and maintain the Service</td>
+<td>Account creation, features, transactions</td>
+<td>Contract (Art. 6(1)(b))</td>
+</tr>
+<tr>
+<td>Security & fraud prevention</td>
+<td>Authenticate, prevent abuse</td>
+<td>Legitimate interests (Art. 6(1)(f)) and/or Legal obligation (Art. 6(1)(c))</td>
+</tr>
+<tr>
+<td>Analytics</td>
+<td>Measure usage, improve features</td>
+<td>Consent for non-essential cookies/SDKs; limited legitimate interests only where permitted without tracking</td>
+</tr>
+<tr>
+<td>Marketing communications</td>
+<td>Newsletters, product updates</td>
+<td>Consent (you may withdraw at any time)</td>
+</tr>
+<tr>
+<td>Personalized ads</td>
+<td>Cross-context behavioral advertising</td>
+<td>Consent (EU/UK). California: opt-out of sale/share</td>
+</tr>
+<tr>
+<td>Compliance</td>
+<td>Tax, accounting, legal requests</td>
+<td>Legal obligation (Art. 6(1)(c))</td>
+</tr>
+</tbody>
+</table>
+<p>We collect several different types of information for various purposes to provide and improve our Service to you.</p>
+
+<h3>Types of Data Collected</h3>
+
+<h4>Personal Data</h4>
+<p>While using our Service, we may ask you to provide us with certain personally identifiable information that can be used to contact or identify you ("Personal Data"). Personally identifiable information may include, but is not limited to:</p>
+
+<ul>
+<li>Email address</li>
+<li>Player name you choose, or the display name of your Google account if you sign in with Google</li>
+<li>If you sign in with Google: the name and email address of your Google account</li>
+<li>If you create a player-name account: a PIN you choose, which is handled by our authentication provider (Google Firebase Authentication)</li>
+<li>An account identifier assigned when you create an account or sign in</li>
+<li>Game data: your scores, level progress, game settings, and whether you have purchased ad removal (the purchase itself is processed by Google Play; we do not receive your payment details)</li>
+</ul>
+
+<h4>Leaderboards and Player Names</h4>
+<p>In our apps, your player name and scores are shown to other players on the public leaderboard. Please choose a name that does not identify you. If you play as a guest without a player name, your progress stays on your device only; nothing is posted to the leaderboard or stored in our database until you set a player name or sign in.</p>
+
+<h4>Usage Data</h4>
+<p>We may also collect information that your browser sends whenever you visit our Service or when you access the Service by or through a device ("Usage Data"). Usage Data may include information such as your device's Internet Protocol (IP) address, browser type and version, device identifiers, the pages of our Service that you visit, the time and date of your visit, the time spent on those pages, and other diagnostic data.</p>
+<p>When you are signed in to one of our apps, we also store the following device information with your account for diagnostics and to prevent abuse: device model and manufacturer, operating system version, web view version, app version, language, time zone, screen size, and whether the device is an emulator.</p>
+
+<h4>Advertising</h4>
+<p>Our apps show ads served by Google AdMob. AdMob and its partners may collect your advertising identifier, IP address and other device and usage data to serve, personalize and measure ads. Where the law requires it, we ask for your consent before ads are personalized; you can review your choice under Settings &rarr; Privacy Settings in the app (where shown) and reset your advertising identifier in your device settings. You can remove ads with an in-app purchase.</p>
+
+<h4>Cookies and Similar Technologies</h4>
+<p>We use cookies (on our website) and SDKs (in our mobile app), along with pixels and similar technologies. Essential cookies are required to operate the Service. We may also use non-essential cookies and SDKs for analytics, personalization, or advertising purposes in accordance with applicable law. You can manage these via your browser or device settings.</p>
+
+<h3>Sources of Personal Data</h3>
+<ul>
+<li><strong>You:</strong> Information you provide (e.g., forms, account, support).</li>
+<li><strong>Device & browser:</strong> Technical and usage data (e.g., IP address, device identifiers, logs). Non-essential cookies/SDKs are used only with consent where required.</li>
+</ul>
+
+<h2>USE OF DATA</h2>
+<p>Green Box Entertainment, LLC uses the collected data for various purposes:</p>
+<ul>
+    <li>To provide and maintain the Service</li>
+    <li>To allow you to participate in interactive features of our Service when you choose to do so</li>
+    <li>To provide customer care and support</li>
+    <li>To provide analysis or valuable information so that we can improve the Service</li>
+    <li>To monitor the usage of the Service</li>
+    <li>To detect, prevent and address technical issues</li>
+    
+</ul>
+
+<h2>RETENTION</h2>
+<p>We keep personal data only as long as necessary for the purposes described or as required by law. Where specific periods are not feasible, we apply clear criteria (e.g., account lifetime + a defined period, statutory limitation periods). Cookies and SDKs have varying retention periods depending on their purpose. In our apps, the data tied to your account is kept until you delete the account.</p>
+<h2>DELETE OR UPDATE YOUR DATA</h2>
+<p>Where available, you may update certain information within your account settings. You may also request that we delete Personal Data we hold about you, subject to legal exceptions (for example, if we must retain data to comply with law).</p>
+<p>Each of our apps provides a Settings &rarr; Delete Account option that removes your personal account data, including your account, player name, scores and leaderboard entries, progress, settings and device information.</p>
+<h2>YOUR CHOICES</h2>
+<ul>
+    <li>Opt out of marketing emails via the unsubscribe link or by contacting us.</li>
+    <li>Manage cookies through your browser settings.</li>
+    <li>California residents: use our Do Not Sell or Share and Limit SPI options where applicable.</li>
+</ul>
+
+<h2>INTERNATIONAL TRANSFERS</h2>
+<p>Personal data may be transferred to and processed in countries outside the EEA or UK. Where such transfers occur, we use appropriate safeguards such as the EU Standard Contractual Clauses (Commission Decision (EU) 2021/914) and/or the UK International Data Transfer Agreement/Addendum, and we carry out transfer risk assessments with supplementary measures where appropriate.</p>
+<p>Our hosting and service providers may be located in various jurisdictions. We ensure that all data processors maintain adequate data protection standards.</p>
+
+<h3>Service Providers and Affiliates</h3>
+<p>We may employ third-party companies and individuals to facilitate our Service ("Service Providers"), provide the Service on our behalf, perform Service-related services, or assist us in analyzing how our Service is used. We may also share information with our affiliates, in which case we require them to honor this Privacy Policy. These third parties have access to Personal Data only to perform these tasks on our behalf and are obligated not to disclose or use it for any other purpose.</p>
+<p>Typical categories of recipients include cloud hosting, analytics, advertising/remarketing partners (where enabled), payment processors, customer support platforms, and security/fraud-prevention vendors.</p>
+<p>Our apps use these Google services as Service Providers: Firebase (authentication and database), Google Play (distribution and in-app purchases) and Google AdMob (advertising). Google handles data under its own privacy policy: <a href="https://policies.google.com/privacy">https://policies.google.com/privacy</a>.</p>
+<h3>Business Transfers</h3>
+<p>We may share or transfer your information in connection with, or during negotiations of, any merger, sale of company assets, financing, or acquisition of all or a portion of our business to another company.</p>
+
+<h3>Legal Requirements</h3>
+<p>Green Box Entertainment, LLC may disclose your Personal Data in the good faith belief that such action is necessary to:</p>
+<ul>
+    <li>Comply with a legal obligation</li>
+    <li>Protect and defend the rights or property of Green Box Entertainment, LLC</li>
+    <li>Prevent or investigate possible wrongdoing in connection with the Service</li>
+    <li>Protect the personal safety of users of the Service or the public</li>
+    <li>Protect against legal liability</li>
+</ul>
+
+<h2>SECURITY OF DATA</h2>
+<p>We implement appropriate technical and organizational measures to protect your Personal Data. While no method of transmission or storage is 100% secure, we continuously improve our safeguards.</p>
+
+<h2>AUTOMATED DECISION-MAKING</h2>
+<p>We do not make decisions based solely on automated processing that produce legal or similarly significant effects. If this changes, we will provide required information about the logic involved and your rights.</p>
+
+<h2>LINKS TO OTHER SITES</h2>
+<p>Our Service may contain links to other sites that are not operated by us. If you click on a third party link, you will be directed to that third party's site. We strongly advise you to review the Privacy Policy of every site you visit.</p>
+<p>We have no control over and assume no responsibility for the content, privacy policies or practices of any third party sites or services.</p>
+
+<h2>CHILDREN'S PRIVACY</h2>
+<p>Our Services are not directed to children. For EU/UK users, where we offer information society services and rely on consent, we obtain parental consent for users below the applicable age (EU up to 16; UK 13). If you believe a child has provided data contrary to this policy, contact us to request deletion.</p>
+
+<h2>CHANGES TO THIS PRIVACY POLICY</h2>
+<p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page.</p>
+<p>We will let you know via email and/or a prominent notice on our Service, prior to the change becoming effective and update the "Last updated" date at the top of this Privacy Policy.</p>
+<p>You are advised to review this Privacy Policy periodically for any changes. Changes to this Privacy Policy are effective when they are posted on this page.</p>
+
+<h2>CONTACT US</h2>
+<p>If you have any questions about this Privacy Policy or wish to exercise your rights, please contact us:</p>
+<ul>
+<li><strong>Privacy requests:</strong> <a href="mailto:support@greenboxent.com">support@greenboxent.com</a></li>
+<li><strong>By email:</strong> <a href="mailto:support@greenboxent.com">support@greenboxent.com</a></li>
+</ul>
+
+
+      </div>
+    </article>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-logo">TermsBox</div>
+      <p class="footer-text">
+        This privacy policy was generated using
+        <a href="https://termsbox.com" class="footer-link" target="_blank" rel="noopener noreferrer">
+          TermsBox Legal Document Generator
+        </a>
+      </p>
+      
+    </footer>
+  </main>
+</body>
+</html>

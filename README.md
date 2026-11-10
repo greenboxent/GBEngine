@@ -181,6 +181,10 @@ input: { main: 'index.html', deleteAccount: 'delete-account.html' },
 ```
 (The per-user paths — settings, personal scores — are normally already `auth.uid == $uid` read/write.)
 
+## Privacy policy
+
+`legal/privacy-policy.html` is the source of the Green Box Games privacy policy (https://www.greenboxgames.com/privacy-policy), shared by every app. Keep it generic — no app names or app-specific URLs — and update it, including the "Last updated" date, whenever an app changes what it collects (the Play Data safety form must match). It is published on the website by hand; this copy is only the editable source.
+
 ## Publishing a new version
 
 ```bash
