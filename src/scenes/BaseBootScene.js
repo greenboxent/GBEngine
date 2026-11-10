@@ -54,6 +54,16 @@ export default class BaseBootScene extends Phaser.Scene {
             { fontSize: Math.round(Math.min(28, width * 0.05)) + 'px', color: '#ffffff' }
         ).setOrigin(0.5);
 
+        // Optional smaller line under the label (e.g. the build version)
+        const subText = this._getLoadingSubtext();
+        if (subText) {
+            this._loadingSubtext = this.add.text(
+                width / 2, this._loadingText.y + this._loadingText.height / 2 + 6,
+                subText,
+                { fontSize: Math.round(Math.min(16, width * 0.03)) + 'px', color: '#888888' }
+            ).setOrigin(0.5, 0);
+        }
+
         // Progress bar
         const barW = Math.round(Math.min(400, width * 0.7));
         const barH = 40;
@@ -92,6 +102,7 @@ export default class BaseBootScene extends Phaser.Scene {
         this._progressBox?.destroy();
         this._percentText?.destroy();
         this._loadingText?.destroy();
+        this._loadingSubtext?.destroy();
 
         await this._onAllReady();
     }
@@ -102,6 +113,9 @@ export default class BaseBootScene extends Phaser.Scene {
 
     /** Return the loading label text. */
     _getLoadingText() { return 'Loading…'; }
+
+    /** Return a smaller line shown under the loading label (default: none). */
+    _getLoadingSubtext() { return ''; }
 
     /**
      * Preload hook — add your game assets here.
