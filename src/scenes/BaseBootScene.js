@@ -114,8 +114,15 @@ export default class BaseBootScene extends Phaser.Scene {
     /** Return the loading label text. */
     _getLoadingText() { return 'Loading…'; }
 
-    /** Return a smaller line shown under the loading label (default: none). */
-    _getLoadingSubtext() { return ''; }
+    /**
+     * Return a smaller line shown under the loading label. Default: the build
+     * version (`v1.2.3`) when the game's Vite config defines `__APP_VERSION__`
+     * from package.json (see `readAppVersion()` in `@gamebase/gbengine/vite`),
+     * so an installed build's version is visible without signing in.
+     */
+    _getLoadingSubtext() {
+        return typeof __APP_VERSION__ === 'undefined' ? '' : `v${__APP_VERSION__}`;
+    }
 
     /**
      * Preload hook — add your game assets here.

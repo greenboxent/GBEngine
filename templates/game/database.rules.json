@@ -1,0 +1,45 @@
+{
+  "rules": {
+    "{{SLUG}}-settings": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+    "games": {
+      "{{SLUG}}": {
+        "personalScores": {
+          "$uid": {
+            ".read": "auth != null && auth.uid == $uid",
+            ".write": "auth != null && auth.uid == $uid"
+          }
+        }
+      }
+    },
+    "playerNames": {
+      ".read": "auth != null",
+      ".indexOn": ".value",
+      "$key": {
+        ".write": "auth != null && (!data.exists() || data.val() === auth.uid) && (!newData.exists() || newData.val() === auth.uid)"
+      }
+    },
+    "{{SLUG}}-leaderboard": {
+      ".read": true,
+      ".indexOn": ["score", "playerId"],
+      "$entryId": {
+        ".write": "auth != null && ((!data.exists() && newData.exists()) || (data.exists() && !newData.exists() && data.child('playerId').val() === auth.uid))",
+        ".validate": "newData.hasChildren(['playerId', 'playerName', 'score', 'level', 'difficulty', 'timestamp'])",
+        "playerId":         { ".validate": "newData.val() === auth.uid" },
+        "playerName":       { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64" },
+        "score":            { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" },
+        "level":            { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100" },
+        "difficulty":       { ".validate": "newData.val() === 'easy' || newData.val() === 'medium' || newData.val() === 'hard'" },
+        "timeElapsed":      { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "errors":           { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        "difficultyScaled": { ".validate": "newData.isBoolean()" },
+        "timestamp":        { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 86400000" },
+        "$other":           { ".validate": false }
+      }
+    }
+  }
+}

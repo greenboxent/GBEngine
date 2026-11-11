@@ -139,6 +139,62 @@ export class LeaderboardService {
     }
 
     /**
+     * Posts local best scores the board doesn't hold yet. Scores are normally
+     * submitted when a level is completed, which needs a signed-in player with
+     * a name — so scores earned as a guest (or before a name was set) never
+     * reach the board. Call this after a name is set / a sign-in / when the
+     * leaderboard opens: for each entry it submits one score unless this
+     * account already has one at least as high for the same key.
+     *
+     * Idempotent (safe to repeat) and runs at most once per account per app
+     * session. Does nothing without a player name, a non-anonymous signed-in
+     * account, or the `firebase` backend. Never throws.
+     *
+     * @param {Array<{score:number, level?:number, difficulty?:string}>} entries
+     *        Local bests, e.g. one per level and difficulty.
+     * @param {object} [options]
+     * @param {object} [options.extra]  Fields merged into every submitted entry (e.g. `{ difficultyScaled: true }`).
+     * @param {function(object): string} [options.keyOf]
+     *        Identity of an entry (default `` `${difficulty}:${level}` ``); must work on both local entries and stored ones.
+     * @param {function(object): number} [options.existingScore]
+     *        Score of a stored board entry (default `e.score`) — use to normalise legacy entries.
+     * @returns {Promise<number>} How many scores were submitted.
+     */
+    async publishMissingScores(entries, { extra = {}, keyOf, existingScore } = {}) {
+        const playerName = (localStorage.getItem('playerName') || '').trim();
+        const uid = this._fb.getUser?.()?.uid;
+        if (this.backendMode !== 'firebase' || !playerName || !uid || !this._fb.isReady()
+            || this._fb.getUser().isAnonymous || this._publishedUid === uid) return 0;
+        this._publishedUid = uid;
+
+        const key = keyOf ?? (e => `${e.difficulty ?? 'medium'}:${e.level ?? 1}`);
+        const scoreOf = existingScore ?? (e => e.score);
+        try {
+            const { ref, get, query, orderByChild, equalTo } = this._fb.getFunctions();
+            const coll = ref(this._fb.getDatabase(), this.collectionPath);
+            const have = new Map(); // key -> best score this account already has on the board
+            const snap = await get(query(coll, orderByChild('playerId'), equalTo(uid)));
+            snap.forEach(child => {
+                const e = child.val();
+                have.set(key(e), Math.max(have.get(key(e)) ?? 0, scoreOf(e)));
+            });
+
+            let posted = 0;
+            for (const e of entries) {
+                if ((have.get(key(e)) ?? 0) >= e.score) continue;
+                const ok = await this._submitFirebase(e.score, e.level ?? 1, e.difficulty ?? 'medium', playerName, 0, 0, extra);
+                if (!ok) throw new Error('submit failed');
+                posted++;
+            }
+            return posted;
+        } catch (error) {
+            Debug.warn('LeaderboardService', 'publishMissingScores failed:', error?.message);
+            this._publishedUid = null; // retry next time
+            return 0;
+        }
+    }
+
+    /**
      * Inserts or replaces a score in the in-memory mock leaderboard.
      * @private
      * @returns {Promise<boolean>}
@@ -179,7 +235,9 @@ export class LeaderboardService {
      * @returns {Promise<Array>}
      */
     async _getTopFirebase(limit = 10) {
-        if (!this._fb.isReady()) { Debug.error('LeaderboardService', 'Firebase not ready'); return []; }
+        // Does not need a signed-in user: guests (no account) can read a leaderboard
+        // whose rules allow public reads (see templates/game/database.rules.json).
+        if (!this._fb.initialized || !this._fb.getDatabase()) { Debug.error('LeaderboardService', 'Firebase not ready'); return []; }
         try {
             const { ref, get, query, orderByChild, limitToLast } = this._fb.getFunctions();
             const db = this._fb.getDatabase();

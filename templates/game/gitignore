@@ -1,0 +1,12 @@
+node_modules/
+dist/
+android/
+ios/
+.env
+.env.*
+*.log
+.DS_Store
+.claude/settings.local.json
+.firebase/
+firebase-backups/
+!/config/android/

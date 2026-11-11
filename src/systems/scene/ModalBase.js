@@ -154,8 +154,9 @@ export default class ModalBase {
     _createOverlay() {
         const { width, height } = this.scene.scale;
 
-        // Add fullscreen background image if specified
-        if (this.overlayBackgroundImage) {
+        // Add fullscreen background image if specified — and actually loaded: a missing key would
+        // draw Phaser's green placeholder over the whole modal.
+        if (this.overlayBackgroundImage && this.scene.textures.exists(this.overlayBackgroundImage)) {
             this.overlayBg = this.scene.add.image(
                 width / 2,
                 height / 2,

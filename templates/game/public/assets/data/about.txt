@@ -1,0 +1,10 @@
+{{NAME}}
+
+Version 0.0.1
+
+Describe your game here.
+
+Privacy Policy: https://www.greenboxgames.com/privacy-policy
+Terms & Conditions: https://www.greenboxgames.com/terms-and-conditions
+
+© {{YEAR}}

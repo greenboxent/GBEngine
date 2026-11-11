@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "{{SLUG}}-dev",
+    "dev": "{{SLUG}}-dev",
+    "prod": "{{SLUG}}-prod"
+  }
+}

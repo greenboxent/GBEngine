@@ -1,0 +1,23 @@
+{
+  "appId": "{{PACKAGE}}",
+  "appName": "{{NAME}}",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "android": {
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    },
+    "AdMob": {
+      "appId": "{{ADMOB_APP_ID}}",
+      "isTesting": false
+    },
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com"],
+      "clientId": "REPLACE_WITH_THE_WEB_OAUTH_CLIENT_ID_FROM_google-services.json"
+    }
+  }
+}

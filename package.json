@@ -6,7 +6,8 @@
     "main": "src/index.js",
     "exports": {
         ".": "./src/index.js",
-        "./delete-account-page": "./src/web/DeleteAccountPage.js"
+        "./delete-account-page": "./src/web/DeleteAccountPage.js",
+        "./vite": "./src/vite/index.js"
     },
     "publishConfig": {
         "registry": "https://npm.pkg.github.com"
@@ -16,6 +17,7 @@
         "@capacitor-firebase/authentication": "^8.0.0",
         "@capacitor/app": "^8.0.0",
         "@capacitor/core": "^8.0.0",
+        "@capacitor/device": "^8.0.0",
         "@capgo/native-purchases": "^8.0.0",
         "firebase": "^12.0.0",
         "phaser": "^4.0.0"
@@ -25,6 +27,7 @@
         "@capacitor-firebase/authentication": "^8.1.0",
         "@capacitor/app": "^8.0.1",
         "@capacitor/core": "^8.0.1",
+        "@capacitor/device": "^8.0.3",
         "@capgo/native-purchases": "^8.3.0",
         "docdash": "^2.0.2",
         "firebase": "^12.8.0",
@@ -33,7 +36,8 @@
     },
     "scripts": {
         "lint": "echo \"No linter configured yet\"",
-        "docs": "node scripts/generate-docs.js"
+        "docs": "node scripts/generate-docs.js",
+        "test": "node --test \"test/*.test.mjs\""
     },
     "keywords": [
         "phaser",

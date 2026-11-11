@@ -18,6 +18,12 @@ export { Settings, registerSettings } from './systems/SettingsManager.js';
 export * from './systems/AccountDeletion.js';       // deleteAccount, authProviderId, reauth helpers, AccountDataConfig
 export { showDeleteAccountDialog } from './ui/DeleteAccountDialog.js';
 export { ensureGooglePlayerName, showGooglePlayerNameDialog, validatePlayerName, suggestGoogleName } from './ui/PlayerNameDialog.js';
+export { initSession } from './systems/Session.js';                  // guest vs restored account at startup (no login screen)
+export { AccountScopedStore } from './systems/AccountScopedStore.js'; // progress that merges guest -> account, once per account
+export { recordDeviceInfo } from './systems/DeviceInfo.js';           // device model/OS/etc. saved with the account
+export { guarded } from './systems/bootGuard.js';                     // let boot continue past a hung service
+export { detectPlatform, isPlayGamesPC } from './systems/platform.js'; // Play Games on PC: no touch UI + controller bridge
+export { createWebLimit } from './systems/WebLimit.js';               // web demo level limit
 
 // ─── Systems — verbatim ──────────────────────────────────────────────────────
 export { AdService }         from './systems/AdService.js';
@@ -53,6 +59,7 @@ export { default as BaseLoginScene }         from './scenes/BaseLoginScene.js';
 export { default as BaseStoreScene }         from './scenes/BaseStoreScene.js';
 export { default as BaseKeybindingsScene }   from './scenes/BaseKeybindingsScene.js';
 export { default as BaseLevelSelectScene }   from './scenes/BaseLevelSelectScene.js';
+export { default as BaseWebLimitScene }     from './scenes/BaseWebLimitScene.js';
 
 // ─── UI ──────────────────────────────────────────────────────────────────────
 // ui.js already re-exports everything from all components via export *

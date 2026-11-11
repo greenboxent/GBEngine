@@ -1,0 +1,9 @@
+{{NAME}} Help
+
+Describe the controls and tips here.
+
+Regarding high scores: scores are only posted to the leaderboard when you have a
+Player Name. Set one in Settings > Game by signing in with Google or entering a
+name and PIN.
+
+© {{YEAR}}

@@ -8,6 +8,7 @@ export * from './components/uiButton.js';
 export * from './components/uiMenuButton.js';
 export * from './components/uiLayout.js';
 export * from './components/uiPanel.js';
+export * from './components/uiPlayerName.js';
 export * from './components/uiSelector.js';
 export * from './components/uiSlider.js';
 export * from './components/uiTabs.js';

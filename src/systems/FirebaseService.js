@@ -41,6 +41,13 @@ class FirebaseService {
         /** @private */ this.user = null;
         /** @private */ this.playerId = null;
         /** @private */ this.initialized = false;
+        /**
+         * True if the saved auth session was NOT confirmed within the restore
+         * timeout during `init()` — "nobody is signed in" is then only a guess
+         * (slow cold start / network), so callers must not wipe local account data.
+         * @type {boolean}
+         */
+        this.authRestoreTimedOut = false;
         /** @private */ this.initPromise = null;
         /** @private */ this._pendingConfig = null;
     }
@@ -116,6 +123,7 @@ class FirebaseService {
                 // Timeout: give onAuthStateChanged 6 s to fire, then proceed without session.
                 const timeoutId = setTimeout(() => {
                     Debug.warn('FirebaseService', 'onAuthStateChanged timed out — proceeding without auth session (Android native bridge may have fired before JS loaded)');
+                    this.authRestoreTimedOut = true;
                     finish('Auth session restore timed out');
                 }, 6000);
 

@@ -13,6 +13,9 @@ import { containsProfanity } from '../systems/ProfanityFilter.js';
 import { SoundManager } from '../systems/SoundManager.js';
 import { ButtonTheme } from '../ui/styles/buttonTheme.js';
 import GamepadTestPanel from '../ui/GamepadTestPanel.js';
+import { ensureGooglePlayerName } from '../ui/PlayerNameDialog.js';
+import { showDeleteAccountDialog } from '../ui/DeleteAccountDialog.js';
+import { recordDeviceInfo } from '../systems/DeviceInfo.js';
 
 /**
  * Tabbed settings modal covering Game, Audio, Help, Controls, Gamepad, and About.
@@ -23,6 +26,10 @@ import GamepadTestPanel from '../ui/GamepadTestPanel.js';
  * - `_getHelpTextKey()` — cache key for the help text asset
  * - `_getAboutTextKey()` — cache key for the about text asset
  * - `_getKeybindingsSceneKey()` — scene key to open from the Controls tab
+ * - `_buildAccountSection()` / `_buildLegalLinks()` — call from `_buildGameTab` for the
+ *   Google sign-in / player name / Sign Out / Delete Account block and the legal links;
+ *   hooks `_getAccountData()`, `_getPrivacyUrl()`, `_getTermsUrl()`, `_onAccountChanged()`,
+ *   `_afterGoogleSignIn()`, `_signOut()`
  *
  * @example
  * export default class SettingsScene extends BaseSettingsScene {
@@ -607,6 +614,252 @@ export default class BaseSettingsScene extends Phaser.Scene {
     }
 
     // -------------------------------------------------------------------------
+    // Account section (Game tab) — Google sign-in, player name, sign out, delete
+    // -------------------------------------------------------------------------
+
+    /**
+     * Builds the account block of the Game tab, for a game with no login screen
+     * (see `systems/Session.js`):
+     *
+     * - signed out (guest): **Sign in with Google**, "or", then the player-name field
+     *   (entering a name + PIN claims or signs in to a name account);
+     * - signed in: the player-name field, then **Sign Out** (reloads the app as a
+     *   guest) and **Delete Account** (if `_getAccountData()` is set).
+     *
+     * Call from `_buildGameTab` and continue laying out from the returned Y.
+     *
+     * @param {object} scrollPanel  The Game tab's UIScrollablePanel.
+     * @param {number} startY       Y to start at (panel coordinates).
+     * @param {{panelW:number, tabFs:number, cfs:string}} layout  Same values `_buildGameTab` receives.
+     * @returns {number} Y below the block.
+     */
+    _buildAccountSection(scrollPanel, startY, { panelW, tabFs, cfs }) {
+        const px     = panelW / 2;
+        const sStep  = Math.max(96, Math.round(tabFs * 4.8));
+        const descH  = Math.max(28, Math.round(tabFs * 1.4));
+        const pad    = Math.max(16, Math.round(tabFs * 0.8));
+        const labelH = Math.max(36, Math.round(tabFs * 1.8));
+        const valueH = Math.max(44, Math.round(tabFs * 2.2));
+        let   cy     = startY;
+
+        const provider      = firebaseService.getAuthProvider();
+        const savedName     = localStorage.getItem('playerName') || '';
+        const isGoogle      = provider === 'google';
+        const googleUser    = isGoogle ? firebaseService.getUser() : null;
+        const googleDerived = googleUser
+            ? (googleUser.email || '').split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '')
+            : '';
+        const effectiveName = savedName || googleDerived;
+
+        let nameHint = '';
+        if (isGoogle && googleUser) {
+            nameHint = savedName ? `Google: ${googleUser.email || ''}` : 'Suggested from email — tap to change';
+        }
+
+        // ── No name yet: say what that means ────────────────────────────────
+        if (!effectiveName) {
+            scrollPanel.addItem(
+                this.add.text(px, cy, this._getNoNameWarning(), {
+                    fontFamily: 'Arial',
+                    fontSize: Math.max(13, Math.round(tabFs * 0.78)),
+                    color: '#ff4444',
+                    wordWrap: { width: panelW - 60 },
+                    align: 'center',
+                }).setOrigin(0.5, 0.0)
+            );
+            cy += Math.max(44, Math.round(tabFs * 2.2));
+        }
+
+        // ── Google sign-in (signed-out players only), then "or" the name field ─
+        if (provider === 'none' || provider === 'anonymous') {
+            const googleStatus = this.add.text(px, cy + sStep - 12, '', {
+                fontFamily: 'Arial', fontSize: Math.max(13, Math.round(tabFs * 0.75)), color: '#ffaa00',
+            }).setOrigin(0.5, 0.5);
+            scrollPanel.addItem(
+                createMenuButton(this, px, cy + Math.round(sStep / 2) - 8, 'Sign in with Google', () => {
+                    this._signInWithGoogle(googleStatus);
+                }, { fontSize: cfs })
+            );
+            scrollPanel.addItem(googleStatus);
+            cy += sStep;
+            scrollPanel.addItem(
+                this.add.text(px, cy, 'or', {
+                    fontFamily: 'Arial', fontSize: cfs, color: '#aaaaaa',
+                }).setOrigin(0.5, 0.5)
+            );
+            cy += labelH;
+        }
+
+        // ── Player name ──────────────────────────────────────────────────────
+        scrollPanel.addItem(
+            this.add.text(px, cy, 'Player Name', {
+                fontFamily: 'Arial', fontSize: cfs, color: '#ffffff', fontStyle: 'bold',
+            }).setOrigin(0.5, 0.5)
+        );
+        cy += labelH;
+
+        const nameValueTxt = this.add.text(
+            px, cy,
+            effectiveName || '[ Tap to set name ]', {
+                fontFamily: 'Arial', fontSize: cfs,
+                color: effectiveName ? '#00ffcc' : '#888888',
+                backgroundColor: '#333333',
+                padding: { x: 14, y: 6 },
+            }
+        ).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
+        nameValueTxt.on('pointerdown', () => this._showNameInput(nameValueTxt, googleDerived));
+        scrollPanel.addItem(nameValueTxt);
+        cy += valueH;
+
+        if (nameHint) {
+            scrollPanel.addItem(
+                this.add.text(px, cy, nameHint, {
+                    fontFamily: 'Arial', fontSize: Math.max(13, Math.round(tabFs * 0.75)), color: '#888888',
+                }).setOrigin(0.5, 0.5)
+            );
+            cy += descH;
+        }
+
+        // ── Sign Out / Delete Account (signed-in players only) ───────────────
+        if (provider !== 'none') {
+            cy += pad;
+            scrollPanel.addItem(this.add.rectangle(px, cy, panelW - 40, 1, 0x444444));
+            cy += pad;
+
+            const signOutCy = cy + Math.round(sStep / 2);
+            const confirmMsg = (provider === 'anonymous' && !savedName.trim())
+                ? 'No data has been saved to an account. You will start fresh.'
+                : 'Sign out and play as a guest?';
+            // The Yes/No buttons must be made non-interactive whenever they're
+            // hidden, not just invisible — Phaser containers stay hit-testable
+            // when setVisible(false), so a stray tap landing on their fixed screen
+            // coordinates could silently trigger "sign out" with nothing visible there.
+            const signOutBtn = createMenuButton(this, px, signOutCy, 'Sign Out', () => {
+                signOutConfirm.setVisible(true);
+                signOutBtn.setVisible(false);
+                signOutBtn.disableInteractive();
+                yesBtn.setInteractive({ useHandCursor: true });
+                noBtn.setInteractive({ useHandCursor: true });
+            }, { fontSize: cfs });
+            scrollPanel.addItem(signOutBtn);
+
+            const signOutConfirm = this.add.container(0, 0);
+            const confirmTxt = this.add.text(px, signOutCy - 16, confirmMsg, {
+                fontFamily: 'Arial', fontSize: cfs, color: '#ff8888',
+            }).setOrigin(0.5);
+            const yesBtn = createMenuButton(this, px - 70, signOutCy + 24, 'Yes', () => this._signOut(), { fontSize: cfs });
+            const noBtn = createMenuButton(this, px + 70, signOutCy + 24, 'No', () => {
+                signOutConfirm.setVisible(false);
+                signOutBtn.setVisible(true);
+                signOutBtn.setInteractive({ useHandCursor: true });
+                yesBtn.disableInteractive();
+                noBtn.disableInteractive();
+            }, { fontSize: cfs });
+            signOutConfirm.add([confirmTxt, yesBtn, noBtn]);
+            signOutConfirm.setVisible(false);
+            yesBtn.disableInteractive();
+            noBtn.disableInteractive();
+            scrollPanel.addItem(signOutConfirm);
+            cy += sStep;
+
+            // Google Play requires an in-app account-deletion path.
+            const accountData = this._getAccountData();
+            if (accountData) {
+                scrollPanel.addItem(
+                    createMenuButton(this, px, cy + Math.round(sStep / 2), 'Delete Account', () => {
+                        showDeleteAccountDialog(this, accountData);
+                    }, { fontSize: cfs })
+                );
+                cy += sStep;
+            }
+        }
+
+        return cy;
+    }
+
+    /**
+     * Privacy Policy and Terms links (the Play listing's policy should also be
+     * reachable inside the app). Returns the Y below them.
+     * @param {object} scrollPanel
+     * @param {number} startY
+     * @param {{panelW:number, tabFs:number}} layout
+     * @returns {number}
+     */
+    _buildLegalLinks(scrollPanel, startY, { panelW, tabFs }) {
+        const px      = panelW / 2;
+        const pad     = Math.max(16, Math.round(tabFs * 0.8));
+        const descH   = Math.max(28, Math.round(tabFs * 1.4));
+        const legalFs = Math.max(13, Math.round(tabFs * 0.8));
+        let cy = startY + pad;
+        scrollPanel.addItem(this.add.rectangle(px, cy, panelW - 40, 1, 0x444444));
+        cy += pad;
+        [['Privacy Policy', this._getPrivacyUrl()], ['Terms & Conditions', this._getTermsUrl()]].forEach(([label, url]) => {
+            const link = this.add.text(px, cy, label, {
+                fontFamily: 'Arial', fontSize: legalFs, color: '#4A9EFF',
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            link.on('pointerdown', () => window.open(url, '_blank'));
+            link.on('pointerover', () => link.setColor('#6BB6FF'));
+            link.on('pointerout',  () => link.setColor('#4A9EFF'));
+            scrollPanel.addItem(link);
+            cy += descH;
+        });
+        return cy;
+    }
+
+    /**
+     * Google sign-in from the Game tab: signs in, claims a player name (a dialog
+     * asks for another if the Google name is taken), runs `_onAccountChanged()`
+     * (re-key game data) and `_afterGoogleSignIn()`, then redraws the tab.
+     * @param {Phaser.GameObjects.Text} [status]  Line under the button for progress/errors.
+     */
+    async _signInWithGoogle(status) {
+        if (this._googleBusy) return;
+        this._googleBusy = true;
+        const show = (msg) => { if (status?.active) status.setText(msg.length > 60 ? msg.substring(0, 60) : msg); };
+        try {
+            show('Signing in...');
+            const result = await firebaseService.signInWithGoogle();
+            if (!result?.success) { show(result?.error || 'Sign-in failed'); return; }
+            show('Loading your data...');
+            await ensureGooglePlayerName(this, result.user);
+            await this._onAccountChanged(false);
+            recordDeviceInfo();
+            await this._afterGoogleSignIn();
+            this.refreshTabContent?.();
+        } catch (err) {
+            show(err?.message || String(err));
+        } finally {
+            this._googleBusy = false;
+        }
+    }
+
+    /**
+     * Signs out and reloads the app, which then starts as a local guest
+     * (`initSession()`). Override to do more first.
+     * @returns {Promise<void>}
+     */
+    async _signOut() {
+        localStorage.removeItem('playerName');
+        await firebaseService.signOut();
+        window.location.reload();
+    }
+
+    /** Hook: runs after a Google sign-in completed and the name is claimed (e.g. publish local scores). */
+    async _afterGoogleSignIn() {}
+
+    /** `AccountDataConfig` (where this game stores per-player data) for Delete Account, or null to hide the button. */
+    _getAccountData() { return null; }
+
+    /** Text shown in red above the sign-in block while there is no player name. */
+    _getNoNameWarning() { return '⚠  Scores and progress are not saved online without a Player Name'; }
+
+    /** Privacy Policy URL. */
+    _getPrivacyUrl() { return 'https://www.greenboxgames.com/privacy-policy'; }
+
+    /** Terms & Conditions URL. */
+    _getTermsUrl() { return 'https://www.greenboxgames.com/terms-and-conditions'; }
+
+    // -------------------------------------------------------------------------
     // Player Name Input Overlay
     // -------------------------------------------------------------------------
 
@@ -789,6 +1042,7 @@ export default class BaseSettingsScene extends Phaser.Scene {
                 // Re-key live settings/scores to the new identity before saving the name.
                 await Settings.load();
                 await this._onAccountChanged(result.isNew);
+                recordDeviceInfo();
             }
 
             const oldName = localStorage.getItem('playerName') || '';
