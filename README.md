@@ -30,7 +30,7 @@ Shared Phaser 4 game framework for Greenbox Entertainment games.
 | `connectedPads` / `padCount` / `mergePads` / `mergedPad` | Game pad helpers (Phaser-free): list the pads, merge them into one |
 | `PadControls` / `givePads` | Two-player pad games: one pad per player (`game.pads()`), and `host.controls` set to the pad of the player on turn |
 | `KeybindingManager` / `Keybindings` | Key binding storage and persistence; `Keybindings` is the singleton |
-| `TouchControls` | On-screen virtual joystick and action buttons (mobile) |
+| `TouchControls` | On-screen move stick (left), fire stick (right) and action buttons (mobile). Options: `pauseButton: false`, `tapJump: true` (a tap anywhere else sets `ic.jump`, for platformers), `enabled` (force on/off), `showWeaponButtons`, `showZoomButton` |
 | `SoundManager` | Centralized music and SFX manager |
 | `WaveManager` | Wave progression and level-complete signalling |
 | `spawnDamageText` | Floating damage number visual effect |

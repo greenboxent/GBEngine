@@ -12,7 +12,7 @@ import { Settings } from './SettingsManager.js';
  * joystick (aim + continuous fire) in the bottom-right, and action buttons
  * (Fire, Dash, weapon cycle, Pause) on the right side.
  *
- * Only activates when `navigator.maxTouchPoints > 0`; silently no-ops on
+ * Only activates when `navigator.maxTouchPoints > 0` (or `config.enabled` says so); silently no-ops on
  * desktop.  Integrates with {@link InputController} — each frame call
  * `update(inputController)` after `inputController.update()` so the IC's
  * stick and aim values are overwritten with the touch state.
@@ -26,16 +26,25 @@ export class TouchControls {
      *   buttons. Set false for games with a single weapon (no switching).
      * @param {boolean} [config.showZoomButton=true]  Show the zoom toggle button.
      *   Set false for games that don't implement scene._toggleZoom.
+     * @param {boolean} [config.pauseButton=true]  Show the pause button. Set false when the game has its own.
+     * @param {boolean} [config.tapJump=false]  A tap anywhere that is not a stick, the fire ring or a button (typically a
+     *   second finger while the move stick is held) sets `ic.jump = true` for one frame, for platformers.
+     * @param {boolean} [config.enabled]  Force the controls on or off. Default: on when the device reports touch points.
+     *   Pass `false` on a computer with a touch screen to keep the keyboard / mouse in charge.
      */
     constructor(scene, config = {}) {
         this.scene  = scene;
         this.active = false;
 
-        // Only activate on real touch devices
-        if (navigator.maxTouchPoints < 1) return;
+        // Only activate on real touch devices (a game that knows better says so with `enabled`)
+        if (!(config.enabled ?? navigator.maxTouchPoints >= 1)) return;
 
         this.active   = true;
         this._visible = true;
+
+        this._pauseButton = config.pauseButton ?? true;
+        this._tapJump     = config.tapJump ?? false;
+        this._tapped      = false;   // a jump tap waiting for the next update()
 
         this._showWeaponButtons = config.showWeaponButtons ?? true;
         this._showZoomButton    = config.showZoomButton    ?? true;
@@ -156,9 +165,8 @@ export class TouchControls {
         this._fireCY = fireCY_s;
 
         const zoomY_s = Math.min(H - actnR - 4, pauseY_s + 2 * actnR + 6);
-        this._BTN = {
-            pause: { x: pauseX_s, y: pauseY_s, r: actnR },
-        };
+        this._BTN = {};
+        if (this._pauseButton) this._BTN.pause = { x: pauseX_s, y: pauseY_s, r: actnR };
         if (this._showWeaponButtons) {
             this._BTN.weaponPrev = { x: joyX_s,   y: wPrevY_s, r: weaponR };
             this._BTN.weaponNext = { x: fireCX_s, y: wNextY_s, r: weaponR };
@@ -200,7 +208,7 @@ export class TouchControls {
         );
         if (BTN.weaponPrev) this._labels.weaponPrev = mkLabel(BTN.weaponPrev, '◀ WPN', 14);
         if (BTN.weaponNext) this._labels.weaponNext = mkLabel(BTN.weaponNext, 'WPN ▶', 14);
-        this._labels.pause = mkLabel(BTN.pause, '❚❚', 16);
+        if (BTN.pause) this._labels.pause = mkLabel(BTN.pause, '❚❚', 16);
         if (BTN.zoom) this._labels.zoom = mkLabel(BTN.zoom, '🔍', 14);
 
         // Add labels to uiLayer so the UI camera renders them at zoom=1.
@@ -221,6 +229,7 @@ export class TouchControls {
         this._fireKnobDX    = 0;
         this._fireKnobDY    = 0;
         this._fireAimAngle  = null;
+        this._tapped        = false;
         for (const k of Object.keys(this._btnDown)) this._btnDown[k] = false;
         for (const k of Object.keys(this._btnPrev)) this._btnPrev[k] = false;
         this._buttonPointerMap = {};
@@ -280,7 +289,7 @@ export class TouchControls {
         // ── Right-side buttons ─────────────────────────────────────────────
         if (BTN.weaponPrev) circle(BTN.weaponPrev, 0x334433, 0x88cc88);
         if (BTN.weaponNext) circle(BTN.weaponNext, 0x334433, 0x88cc88);
-        circle(BTN.pause, 0x222222, 0x888888, 0.60);
+        if (BTN.pause) circle(BTN.pause, 0x222222, 0x888888, 0.60);
         if (BTN.zoom) {
             circle(BTN.zoom,
                 this._zoomActive ? 0x112233 : 0x222222,
@@ -361,15 +370,17 @@ export class TouchControls {
         const py = ptr.y;
 
         // ── Fire joystick (right zone) — checked first to take priority ──
-        if (px > this._joystickZoneW && this._firePointerId === null) {
+        if (px > this._joystickZoneW) {
             const fdx = px - this._fireCX;
             const fdy = py - this._fireCY;
             // Generous hit area: 1.5× radius so the whole bottom-right corner works
             if (fdx * fdx + fdy * fdy <= (this._fireR * 1.5) * (this._fireR * 1.5)) {
-                this._firePointerId = ptr.id;
-                this._fireActive    = true;
-                this._updateFireKnob(px, py);
-                return;
+                if (this._firePointerId === null) {
+                    this._firePointerId = ptr.id;
+                    this._fireActive    = true;
+                    this._updateFireKnob(px, py);
+                }
+                return;   // (a second finger on the fire ring is not a jump tap either)
             }
         }
 
@@ -389,7 +400,11 @@ export class TouchControls {
             this._joystickPointerId = ptr.id;
             // Compute initial knob offset from FIXED center (not touch point)
             this._updateKnob(px, py);
+            return;
         }
+
+        // ── Anything else is a tap (a second finger while the move stick is held) ──
+        if (this._tapJump) this._tapped = true;
     }
 
     /**
@@ -538,6 +553,9 @@ export class TouchControls {
         // —— Aim assist (snap toward nearest enemy within a 30° cone) ————————
         if (this._fireActive) this._applyAimAssist(ic);
 
+        // ── Jump tap (`tapJump` games) ─────────────────────────────────────
+        if (this._tapped) { ic.jump = true; this._tapped = false; }
+
         // ── Pause (edge-triggered) ────────────────────────────────────────
         if (this._btnDown.pause && !this._btnPrev.pause) ic.pause = true;
 
@@ -639,6 +657,7 @@ export class TouchControls {
             this._fireKnobDX    = 0;
             this._fireKnobDY    = 0;
             this._fireAimAngle  = null;
+            this._tapped        = false;
             for (const k of Object.keys(this._btnDown)) this._btnDown[k] = false;
             for (const k of Object.keys(this._btnPrev)) this._btnPrev[k] = false;
             this._buttonPointerMap = {};
