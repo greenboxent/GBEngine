@@ -32,6 +32,7 @@ Shared Phaser 4 game framework for Greenbox Entertainment games.
 | `KeybindingManager` / `Keybindings` | Key binding storage and persistence; `Keybindings` is the singleton |
 | `TouchControls` | On-screen move stick (left), fire stick (right) and action buttons (mobile). Options: `pauseButton: false`, `tapJump: true` (a tap anywhere else sets `ic.jump`, for platformers), `enabled` (force on/off), `showWeaponButtons`, `showZoomButton` |
 | `fitCanvasToWindow` / `restartOnResize` | A `Scale.NONE` game never resizes its canvas: `fitCanvasToWindow(game)` keeps it the size of the window (rotating a phone), and `restartOnResize(this)` at the end of a scene's create() restarts a scene that lays itself out once |
+| `menuButtonSize(gap)` | Font size and padding for menu buttons that must fit `gap` pixels between button centres (spread them with createMenuButton options); keeps a squeezed list from overlapping on a phone |
 | `SoundManager` | Centralized music and SFX manager |
 | `WaveManager` | Wave progression and level-complete signalling |
 | `spawnDamageText` | Floating damage number visual effect |
