@@ -4,26 +4,7 @@
 import * as Phaser from 'phaser';
 import { Keybindings } from './KeybindingManager.js';
 import { Debug } from '../engine/Debug.js';
-
-/**
- * All connected pads as ONE pad, so that every pad can steer the menus (two players, each with their own controller): a button is down
- * when it is down on any pad, an axis is the one pushed furthest. With a single pad that pad itself comes back; null without one.
- * @param {ArrayLike<Gamepad|null>} pads Usually navigator.getGamepads().
- * @returns {Gamepad|object|null}
- */
-export function mergeGamepads(pads) {
-    const list = Array.from(pads ?? []).filter(p => p && p.connected !== false);
-    if (list.length === 0) return null;
-    if (list.length === 1) return list[0];
-    const nb = Math.max(...list.map(p => p.buttons.length)), na = Math.max(...list.map(p => p.axes.length));
-    const buttons = Array.from({ length: nb }, (_, i) => {
-        let pressed = false, touched = false, value = 0;
-        for (const p of list) { const b = p.buttons[i]; if (!b) continue; pressed ||= !!b.pressed; touched ||= !!b.touched; value = Math.max(value, b.value ?? 0); }
-        return { pressed, touched, value };
-    });
-    const axes = Array.from({ length: na }, (_, i) => list.reduce((best, p) => (Math.abs(p.axes[i] ?? 0) > Math.abs(best) ? p.axes[i] : best), 0));
-    return { id: 'merged', index: list[0].index, connected: true, mapping: list[0].mapping, timestamp: Math.max(...list.map(p => p.timestamp ?? 0)), buttons, axes };
-}
+import { mergePads } from './Gamepads.js';
 
 /**
  * A unified runtime input system that reads bindings from {@link KeybindingManager},
@@ -133,7 +114,7 @@ export class InputController {
         // Gamepad connection — listen at window level so it fires regardless of active scene
         window.addEventListener('gamepadconnected', (e) => {
             const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-            this._rawPad = mergeGamepads(pads);
+            this._rawPad = mergePads(pads);
         });
         window.addEventListener('gamepaddisconnected', () => {
             this._rawPad = null;
@@ -175,7 +156,7 @@ export class InputController {
      */
     _seedRawPad() {
         if (!navigator.getGamepads) return;
-        this._rawPad = mergeGamepads(navigator.getGamepads());
+        this._rawPad = mergePads(navigator.getGamepads());
     }
 
     // -------------------------------------------------------------------------
@@ -315,7 +296,7 @@ export class InputController {
         this.pad = this.scene.input.gamepad.getPad(0); // keep Phaser ref for events
         // Refresh from raw API every frame (handles reconnects and index changes)
         const freshPads = navigator.getGamepads ? navigator.getGamepads() : [];
-        const rawPad = mergeGamepads(freshPads) || this._rawPad || null;
+        const rawPad = mergePads(freshPads) || this._rawPad || null;
         if (rawPad) this._rawPad = rawPad;
 
         if (rawPad) {

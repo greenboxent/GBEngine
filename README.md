@@ -26,7 +26,9 @@ Shared Phaser 4 game framework for Greenbox Entertainment games.
 | `Settings` / `registerSettings` | Global settings proxy; call `registerSettings()` at boot |
 | `AdService` | AdMob interstitial wrapper |
 | `IAPService` | Capacitor non-consumable IAP wrapper |
-| `InputController` | Unified keyboard / gamepad input |
+| `InputController` | Unified keyboard / gamepad input (every connected pad steers the menus) |
+| `connectedPads` / `padCount` / `mergePads` / `mergedPad` | Game pad helpers (Phaser-free): list the pads, merge them into one |
+| `PadControls` / `givePads` | Two-player pad games: one pad per player (`game.pads()`), and `host.controls` set to the pad of the player on turn |
 | `KeybindingManager` / `Keybindings` | Key binding storage and persistence; `Keybindings` is the singleton |
 | `TouchControls` | On-screen virtual joystick and action buttons (mobile) |
 | `SoundManager` | Centralized music and SFX manager |
