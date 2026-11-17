@@ -31,6 +31,7 @@ Shared Phaser 4 game framework for Greenbox Entertainment games.
 | `PadControls` / `givePads` | Two-player pad games: one pad per player (`game.pads()`), and `host.controls` set to the pad of the player on turn |
 | `KeybindingManager` / `Keybindings` | Key binding storage and persistence; `Keybindings` is the singleton |
 | `TouchControls` | On-screen move stick (left), fire stick (right) and action buttons (mobile). Options: `pauseButton: false`, `tapJump: true` (a tap anywhere else sets `ic.jump`, for platformers), `enabled` (force on/off), `showWeaponButtons`, `showZoomButton` |
+| `fitCanvasToWindow` / `restartOnResize` | A `Scale.NONE` game never resizes its canvas: `fitCanvasToWindow(game)` keeps it the size of the window (rotating a phone), and `restartOnResize(this)` at the end of a scene's create() restarts a scene that lays itself out once |
 | `SoundManager` | Centralized music and SFX manager |
 | `WaveManager` | Wave progression and level-complete signalling |
 | `spawnDamageText` | Floating damage number visual effect |

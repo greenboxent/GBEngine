@@ -30,6 +30,7 @@ export { AdService }         from './systems/AdService.js';
 export { IAPService }        from './systems/IAPService.js';
 export { InputController }   from './systems/InputController.js';
 export * from './systems/Gamepads.js';                // connectedPads, padCount, mergePads, mergedPad, PadControls, givePads (two-player pad games)
+export { fitCanvasToWindow, restartOnResize } from './systems/resize.js';  // keep a NONE-scale game the size of the window (rotating a phone); restart a scene that lays out once
 export { KeybindingManager, Keybindings } from './systems/KeybindingManager.js';
 export { SoundManager }      from './systems/SoundManager.js';
 export { TouchControls }     from './systems/TouchControls.js';
