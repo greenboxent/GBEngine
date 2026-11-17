@@ -362,15 +362,18 @@ export default class GamepadTestPanel {
      * current gamepad input. Stick positions, button presses, triggers,
      * bumpers, and D-pad states are refreshed every frame.
      *
-     * @param {Phaser.Input.Gamepad.Gamepad} pad - The active gamepad instance.
+     * @param {Phaser.Input.Gamepad.Gamepad} pad - The gamepad to show.
+     * @param {{number: number, count: number}} [info] - Which pad it is when several are connected (see ActivePadTracker).
      */
-    update(pad) {
+    update(pad, info) {
         if (!pad) {
             this.statusLabel.setText("No gamepad detected");
             return;
         }
 
-        this.statusLabel.setText("Xbox Controller Connected");
+        this.statusLabel.setText(info?.count > 1
+            ? `${info.count} gamepads connected  ·  showing gamepad ${info.number}  ·  press a button on another to show it`
+            : "Xbox Controller Connected");
 
         // Sticks
         this._updateStick(this.sticks.left, pad.axes[0], pad.axes[1]);

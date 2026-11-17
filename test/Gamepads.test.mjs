@@ -173,3 +173,50 @@ test('givePads with fewer than two pads: the missing player is lost from the sta
     assert.equal(p[0].lost, false); assert.equal(p[1].lost, true);
     assert.deepEqual(host.flashes, ['PLAYER 2: GAME PAD LOST']);
 });
+
+// ---- ActivePadTracker: the Settings gamepad test shows one pad at a time, and follows the one being used
+
+import { ActivePadTracker, padActive } from '../src/systems/Gamepads.js';
+
+test('padActive: a button, a trigger or a pushed stick; an idle pad is not', () => {
+    assert.equal(padActive(null), false);
+    assert.equal(padActive(pad(0)), false);
+    assert.equal(padActive(pad(0, [2])), true);
+    assert.equal(padActive(pad(0, [], [0, 0, 0, 0], { 7: 0.5 })), true);
+    assert.equal(padActive(pad(0, [], [0.1, 0.2, 0, 0])), false, 'a little stick drift is not use');
+    assert.equal(padActive(pad(0, [], [0, -0.9, 0, 0])), true);
+});
+
+test('ActivePadTracker: no pad, one pad, then a second pad that is used', () => {
+    const t = new ActivePadTracker();
+    assert.deepEqual(t.update([]), { pad: null, number: 0, count: 0 });
+    const a = pad(0), b = pad(1);
+    let r = t.update([a]);
+    assert.equal(r.pad, a); assert.equal(r.number, 1); assert.equal(r.count, 1);
+    r = t.update([a, b]);
+    assert.equal(r.pad, a, 'both idle: it stays on the first');
+    assert.equal(r.count, 2);
+    const b2 = pad(1, [0]);
+    r = t.update([a, b2]);
+    assert.equal(r.pad, b2, 'the second pad is used: it takes over');
+    assert.equal(r.number, 2);
+    r = t.update([a, pad(1)]);
+    assert.equal(r.number, 2, 'and stays on it when everything is idle again');
+    r = t.update([pad(0, [3]), pad(1)]);
+    assert.equal(r.number, 1, 'the first pad is used: back to it');
+});
+
+test('ActivePadTracker: the pad being shown keeps the screen while it is used, even if the other is used too', () => {
+    const t = new ActivePadTracker();
+    t.update([pad(0), pad(1, [0])]);                          // shows pad 2
+    const r = t.update([pad(0, [5]), pad(1, [0])]);
+    assert.equal(r.number, 2);
+});
+
+test('ActivePadTracker: when the shown pad is unplugged it falls back to what is left', () => {
+    const t = new ActivePadTracker();
+    t.update([pad(0), pad(1, [0])]);
+    const r = t.update([pad(0), null]);
+    assert.equal(r.number, 1); assert.equal(r.count, 1);
+    assert.equal(t.update([null, null]).pad, null);
+});

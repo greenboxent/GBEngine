@@ -6,6 +6,7 @@ import * as Phaser from 'phaser';
 import ModalBase from '../systems/scene/ModalBase.js';
 import { createMenuButton, createTabs, createSlider, createSelector, createToggle, UIScrollablePanel } from '../ui/ui.js';
 import { InputController } from '../systems/InputController.js';
+import { ActivePadTracker } from '../systems/Gamepads.js';
 import { Keybindings } from '../systems/KeybindingManager.js';
 import { Settings } from '../systems/SettingsManager.js';
 import { firebaseService } from '../systems/FirebaseService.js';
@@ -147,12 +148,14 @@ export default class BaseSettingsScene extends Phaser.Scene {
         // Update gamepad test panel — use raw browser API to bypass Phaser timestamp guard
         if (this.activeTab === 'Gamepad' && this.gamepadPanel) {
             const rawPads = navigator.getGamepads ? navigator.getGamepads() : [];
-            const rawPad  = Array.from(rawPads).find(p => p !== null) || null;
+            // With several pads connected, show the one that is being used
+            const shown   = (this._padTracker ??= new ActivePadTracker()).update(rawPads);
+            const rawPad  = shown.pad;
             const padForPanel = rawPad ? {
                 axes:    Array.from(rawPad.axes).map(v => ({ getValue: () => v })),
                 buttons: rawPad.buttons,
             } : null;
-            this.gamepadPanel.update(padForPanel);
+            this.gamepadPanel.update(padForPanel, shown);
             // On Gamepad tab: eat all gamepad nav so buttons don't trigger UI actions
             if (this.inputController) {
                 this.inputController.menuUp       = false;

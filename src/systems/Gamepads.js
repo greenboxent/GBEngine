@@ -112,3 +112,35 @@ export function givePads(game, who = () => null) {
         },
     });
 }
+
+/** Whether a pad is being used right now: a button down, a trigger pulled or a stick pushed. */
+export function padActive(p) {
+    if (!p) return false;
+    return p.buttons.some(b => b.pressed || (b.value ?? 0) > 0.2) || p.axes.some(v => Math.abs(v) > 0.3);
+}
+
+/**
+ * For a screen that can show ONE pad at a time (the Settings gamepad test) when several are connected: follows the pad that is being
+ * used. Call `update(pads)` every frame with navigator.getGamepads(); it keeps showing the same pad until another one is used.
+ */
+export class ActivePadTracker {
+    constructor() { this.index = null; }
+
+    /**
+     * @param {ArrayLike<Gamepad|null>} pads
+     * @returns {{pad: Gamepad|null, number: number, count: number}} The pad to show, its place among the connected pads (1-based; 0 for none)
+     *   and how many pads are connected.
+     */
+    update(pads) {
+        const list = Array.from(pads ?? []).filter(p => p && p.connected !== false);
+        if (list.length === 0) { this.index = null; return { pad: null, number: 0, count: 0 }; }
+        let cur = list.find(p => p.index === this.index) ?? null;
+        if (!cur || !padActive(cur)) {
+            const used = list.find(p => padActive(p));
+            if (used) cur = used;
+        }
+        cur ??= list[0];
+        this.index = cur.index;
+        return { pad: cur, number: list.indexOf(cur) + 1, count: list.length };
+    }
+}
