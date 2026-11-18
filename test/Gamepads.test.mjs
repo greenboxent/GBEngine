@@ -220,3 +220,24 @@ test('ActivePadTracker: when the shown pad is unplugged it falls back to what is
     assert.equal(r.number, 1); assert.equal(r.count, 1);
     assert.equal(t.update([null, null]).pad, null);
 });
+
+test('stickQuadrant: nothing inside the dead zone, otherwise one of the four quadrants', async () => {
+    const { stickQuadrant } = await import('../src/systems/Gamepads.js');
+    assert.deepEqual(stickQuadrant(0, 0), { active: false, up: false, down: false, left: false, right: false });
+    assert.equal(stickQuadrant(0.2, -0.2).active, false, 'a light push is not a choice');
+    const q = (x, y) => { const r = stickQuadrant(x, y); return `${r.up ? 'up' : 'down'}-${r.left ? 'left' : 'right'}`; };
+    assert.equal(q(-0.7, -0.7), 'up-left');
+    assert.equal(q(0.7, -0.7), 'up-right');
+    assert.equal(q(-0.7, 0.7), 'down-left');
+    assert.equal(q(0.7, 0.7), 'down-right');
+    for (const [x, y] of [[-0.7, -0.7], [0.5, 0.9], [0, -1]]) { const r = stickQuadrant(x, y); assert.ok(r.left !== r.right && r.up !== r.down, 'exactly one of each pair'); }
+});
+
+test('stickQuadrant: straight up or down keeps the side it had', async () => {
+    const { stickQuadrant } = await import('../src/systems/Gamepads.js');
+    const l = stickQuadrant(-0.7, -0.7), r = stickQuadrant(0.7, -0.7);
+    assert.equal(stickQuadrant(0.02, -1, 0.4, l).left, true);
+    assert.equal(stickQuadrant(-0.02, -1, 0.4, r).right, true);
+    assert.equal(stickQuadrant(0.02, -1).right, true, 'no history: right');
+    assert.equal(stickQuadrant(0.3, -1, 0.4, l).right, true, 'a clear push to the right wins');
+});

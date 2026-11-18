@@ -29,6 +29,7 @@ export class TouchControls {
      * @param {boolean} [config.pauseButton=true]  Show the pause button. Set false when the game has its own.
      * @param {boolean} [config.tapJump=false]  A tap anywhere that is not a stick, the fire ring or a button (typically a
      *   second finger while the move stick is held) sets `ic.jump = true` for one frame, for platformers.
+     * @param {string} [config.fireLabel='FIRE']  The words on the fire ring (for a game that uses it for something else).
      * @param {boolean} [config.enabled]  Force the controls on or off. Default: on when the device reports touch points.
      *   Pass `false` on a computer with a touch screen to keep the keyboard / mouse in charge.
      */
@@ -43,6 +44,7 @@ export class TouchControls {
         this._visible = true;
 
         this._pauseButton = config.pauseButton ?? true;
+        this._fireLabel   = config.fireLabel ?? 'FIRE';
         this._tapJump     = config.tapJump ?? false;
         this._tapped      = false;   // a jump tap waiting for the next update()
 
@@ -204,7 +206,7 @@ export class TouchControls {
         // Fire joystick label at ring center (positioned via instance vars)
         this._labels.fire = mkLabel(
             { x: this._fireCX, y: this._fireCY },
-            'FIRE', 18,
+            this._fireLabel, 18,
         );
         if (BTN.weaponPrev) this._labels.weaponPrev = mkLabel(BTN.weaponPrev, '◀ WPN', 14);
         if (BTN.weaponNext) this._labels.weaponNext = mkLabel(BTN.weaponNext, 'WPN ▶', 14);
@@ -628,6 +630,23 @@ export class TouchControls {
         while (diffDeg >  180) diffDeg -= 360;
         while (diffDeg < -180) diffDeg += 360;
         ic.aimAngle += diffDeg * 0.30;
+    }
+
+    /**
+     * The fire stick as a plain value, for a game that reads it as a second thumb stick: whether a finger is on it, how far the knob is
+     * pushed (x, y in -1..1, y down) and where the ring is on the screen (cx, cy, r), so the game can draw on it.
+     * @returns {{active:boolean, x:number, y:number, cx:number, cy:number, r:number}}
+     */
+    fireStick() {
+        const r = this._fireR || 1;
+        return { active: !!this._fireActive, x: (this._fireKnobDX ?? 0) / r, y: (this._fireKnobDY ?? 0) / r, cx: this._fireCX, cy: this._fireCY, r: this._fireR };
+    }
+
+    /** Changes the words on the fire ring. */
+    setFireLabel(text) {
+        if (!this.active) return;
+        this._fireLabel = text;
+        this._labels.fire?.setText(text);
     }
 
     /**

@@ -106,3 +106,26 @@ test('without tapJump no tap jumps, and hidden controls ignore touches', () => {
     ic = freshIC(); t.update(ic);
     assert.equal(ic.shoot, false);
 });
+
+test('fireStick: where the ring is and how far the knob is pushed, as -1..1', () => {
+    const scene = fakeScene(), t = new TouchControls(scene);
+    let f = t.fireStick();
+    assert.equal(f.active, false);
+    assert.equal(f.cx, t._fireCX); assert.equal(f.cy, t._fireCY); assert.equal(f.r, t._fireR);
+    scene.on.pointerdown(ptr(2, t._fireCX - t._fireR, t._fireCY - t._fireR));            // up and to the left, past the ring
+    f = t.fireStick();
+    assert.equal(f.active, true);
+    assert.ok(f.x < -0.6 && f.y < -0.6 && Math.hypot(f.x, f.y) <= 1.001, `knob ${f.x}, ${f.y}`);
+    scene.on.pointerup(ptr(2, 0, 0));
+    assert.deepEqual([t.fireStick().active, t.fireStick().x, t.fireStick().y], [false, 0, 0]);
+});
+
+test('fireStick on a device without touch is idle; the ring can carry other words', () => {
+    const t = new TouchControls(fakeScene(), { enabled: false });
+    assert.equal(t.fireStick().active, false);
+    t.setFireLabel('PASS');                                                                // no-op when off
+    const on = new TouchControls(fakeScene(), { fireLabel: 'HIT' });
+    assert.equal(on._fireLabel, 'HIT');
+    on.setFireLabel('PASS');
+    assert.equal(on._fireLabel, 'PASS');
+});

@@ -4,6 +4,7 @@
  * @module ui/components/uiScrollablePanel
  */
 import * as Phaser from 'phaser';
+import { clipInput } from './clipInput.js';
 
 /**
  * @typedef {Object} UIScrollablePanelOptions
@@ -78,6 +79,16 @@ export function UIScrollablePanel(scene, x, y, width, height, options = {}) {
         const mask = maskShape.createGeometryMask();
         root.setMask(mask);
     }
+
+    // The mask only hides what is outside the viewport; it must not be pressable either (a scrolled-out button under the Back
+    // button would take its press). `hitX/hitY` are the hit-test point in the object's own space, as Phaser passes them.
+    function insideViewport(go, hitX, hitY) {
+        const p = go.getWorldTransformMatrix().transformPoint(hitX - (go.displayOriginX ?? 0), hitY - (go.displayOriginY ?? 0));
+        return p.x >= root.x && p.x <= root.x + width && p.y >= root.y && p.y <= root.y + height;
+    }
+    // Objects made interactive after they were added (setInteractive on a button already in the list) are picked up here.
+    const clipAll = () => clipInput(content, insideViewport);
+    scene.events.on('update', clipAll);
 
     // Scroll state
     let scrollY = 0;
@@ -229,6 +240,7 @@ export function UIScrollablePanel(scene, x, y, width, height, options = {}) {
      */
     root.addItem = function (item) {
         content.add(item);
+        clipInput(item, insideViewport);
         recalcBounds();
     };
 
@@ -325,6 +337,7 @@ export function UIScrollablePanel(scene, x, y, width, height, options = {}) {
 
     // Cleanup: only remove our own handlers
     root.once('destroy', () => {
+        scene.events.off('update', clipAll);
         scene.input.off('wheel', onWheel);
         scene.input.off('pointerdown', onPointerDown);
         scene.input.off('pointerup', onPointerUp);

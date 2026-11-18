@@ -113,6 +113,23 @@ export function givePads(game, who = () => null) {
     });
 }
 
+/**
+ * Which quadrant a thumb stick (or an on-screen ring) is pushed into, for games that read the right stick as four diagonal choices.
+ * `x` and `y` are -1..1 with y down (the screen way). Inside the dead zone nothing is chosen (`active` is false).
+ * Straight up or down has no side of its own, so it keeps the side it had: pass the last result as `prev`.
+ * @param {number} x
+ * @param {number} y
+ * @param {number} [dead=0.4] How far the stick must be pushed (0..1) before it counts.
+ * @param {{left:boolean,right:boolean}|null} [prev] The last result.
+ * @returns {{active:boolean, up:boolean, down:boolean, left:boolean, right:boolean}}
+ */
+export function stickQuadrant(x, y, dead = 0.4, prev = null) {
+    if (Math.hypot(x, y) <= dead) return { active: false, up: false, down: false, left: false, right: false };
+    const straight = Math.abs(x) < 0.08 && prev && (prev.left || prev.right);
+    const left = straight ? !!prev.left : x < 0;
+    return { active: true, up: y < 0, down: y >= 0, left, right: !left };
+}
+
 /** Whether a pad is being used right now: a button down, a trigger pulled or a stick pushed. */
 export function padActive(p) {
     if (!p) return false;

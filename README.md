@@ -30,7 +30,7 @@ Shared Phaser 4 game framework for Greenbox Entertainment games.
 | `connectedPads` / `padCount` / `mergePads` / `mergedPad` | Game pad helpers (Phaser-free): list the pads, merge them into one |
 | `PadControls` / `givePads` | Two-player pad games: one pad per player (`game.pads()`), and `host.controls` set to the pad of the player on turn |
 | `KeybindingManager` / `Keybindings` | Key binding storage and persistence; `Keybindings` is the singleton |
-| `TouchControls` | On-screen move stick (left), fire stick (right) and action buttons (mobile). Options: `pauseButton: false`, `tapJump: true` (a tap anywhere else sets `ic.jump`, for platformers), `enabled` (force on/off), `showWeaponButtons`, `showZoomButton` |
+| `TouchControls` | On-screen move stick (left), fire stick (right) and action buttons (mobile). Options: `pauseButton: false`, `tapJump: true` (a tap anywhere else sets `ic.jump`, for platformers), `enabled` (force on/off), `showWeaponButtons`, `showZoomButton`, `fireLabel` (words on the ring). `fireStick()` reads the right ring as a second thumb stick (`{active, x, y, cx, cy, r}`); `stickQuadrant()` turns a stick into up / down + left / right |
 | `fitCanvasToWindow` / `restartOnResize` | A `Scale.NONE` game never resizes its canvas: `fitCanvasToWindow(game)` keeps it the size of the window (rotating a phone), and `restartOnResize(this)` at the end of a scene's create() restarts a scene that lays itself out once |
 | `menuButtonSize(gap)` | Font size and padding for menu buttons that must fit `gap` pixels between button centres (spread them with createMenuButton options); keeps a squeezed list from overlapping on a phone |
 | `SoundManager` | Centralized music and SFX manager |
