@@ -207,6 +207,7 @@ The design every game should use (Balloonatics is the reference implementation):
 | `bump-version.js` | Patch-bump `package.json`, `about.txt` and Android `versionCode`/`versionName` (`npm run bump`) |
 | `android-config.mjs <dev\|prod> [--build]` | Generate/refresh `android/` from tracked files (overlay, signing, version) and optionally build the AAB/APK |
 | `firebase-reset.mjs --project … --paths …` | Back up then wipe a project's Auth users + test data (dry run unless `--yes`) |
+| `convert.py` | Interactive aspect-ratio converter for store art and screenshots (needs Python + Pillow): pick a folder, a ratio (4:3, 16:9, 9:16, …), a minimum side and stretch or letterbox; writes PNGs to `output/` |
 
 Unit tests for the account logic (guest merge, once-per-account sync, publish dedupe, session start) run in plain Node: `npm test`.
 
